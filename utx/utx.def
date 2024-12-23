@@ -1,0 +1,36 @@
+/*******************************************************************************
+* Copyright (c) 2024. All rights reserved.
+*
+* This work is licensed under the Creative Commons Attribution 4.0 
+* International License. To view a copy of this license,
+* visit # http://creativecommons.org/licenses/by/4.0/.
+*
+* Author: roximn <roximn148@gmail.com>
+*******************************************************************************/
+#if defined(NAPPGUI_SHARED)
+    #if defined(NAPPGUI_BUILD_UTX_LIB)
+        #define NAPPGUI_UTX_EXPORT_DLL
+    #else
+        #define NAPPGUI_UTX_IMPORT_DLL
+    #endif
+#endif
+
+/*----------------------------------------------------------------------------*/
+#if defined(__GNUC__)
+    #if defined(NAPPGUI_UTX_EXPORT_DLL)
+        #define _utx_api __attribute__((visibility("default")))
+    #else
+        #define _utx_api
+    #endif
+#elif defined(_MSC_VER)
+    #if defined(NAPPGUI_UTX_IMPORT_DLL)
+        #define _utx_api __declspec(dllimport)
+    #elif defined(NAPPGUI_UTX_EXPORT_DLL)
+        #define _utx_api __declspec(dllexport)
+    #else
+        #define _utx_api
+    #endif
+#else
+    #error Unknown compiler
+#endif
+/*----------------------------------------------------------------------------*/
