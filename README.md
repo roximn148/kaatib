@@ -14,12 +14,25 @@ for the unicode script rendering.
 
 ## Features
 * Fast, cross-platform, light weight
-* Primarily RTL text editor
+* Dedicated RTL text editor
 * Roman transliteration
+* Built-in Onscreen keyboard, supporting mutiple languages
+* NLP
+* Spell checker
 
 ## Setup
 ### Windows
 * Build Tools
+  * MSVC
+    
+    From the terinal run,
+    ```sh
+    winget install Microsoft.VisualStudio.2022.BuildTools --force --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended"
+    ```
+
+    and for all the subsequent commands use the **Developer Comaand Prompt for VS 2022**.
+
+    `CMake` comes bundled with `MSVC` installation, so no need to install separately.
 
 * [NAppGui](https://nappgui.com/en/guide/build.html)
 
@@ -34,7 +47,7 @@ for the unicode script rendering.
     cmake --install build --config Release --prefix C:/nappgui
     ```
 
-    This configures and builds the `Release` version of the framework at the specified location (`c:/nappgui` in the above instructions.)
+    This configures, builds the `Release` version of the framework and installs it to the specified location (`c:/nappgui` in the above instructions.)
 
 * [Kaatib](https://github.com/roximn148/kaatib)
     
@@ -54,6 +67,23 @@ for the unicode script rendering.
     git clone https://github.com/ThrowTheSwitch/Unity.git
     ```
 
+* Build
+
+  For building, provide the installation location of the `NAppGui`.
+  ```sh
+  cmake -S . -B build -DCMAKE_INSTALL_PREFIX=c:/nappgui
+  cmake --build build
+  ```
+
+  For Visual Studio Code, add following to the `settings.json`.
+  ```json
+  {
+    "cmake.configureArgs": [
+        "-DCMAKE_INSTALL_PREFIX=c:/nappgui"
+    ]
+  }
+  ```
+  
 ### Linux
 * Build Tools
 

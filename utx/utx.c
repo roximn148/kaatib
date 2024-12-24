@@ -17,6 +17,7 @@ void utx_finish(void) {}
 
 /*----------------------------------------------------------------------------*/
 int utxCreate(const char_t *filePath) {
+    unref(filePath);
     return 1;
 }
 
