@@ -33,7 +33,7 @@ static void destroyApp(App **app) {
 }
 
 /* -------------------------------------------------------------------------- */
-#include "osmain.h"
+#include <osapp/osmain.h>
 const char_t options[] = "";
 osmain(createApp, destroyApp, options, App)
 

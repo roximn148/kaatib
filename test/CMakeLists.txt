@@ -8,6 +8,7 @@
 # Author: roximn <roximn148@gmail.com>
 # ******************************************************************************
 ADD_EXECUTABLE(testUtx test_utx.c)
-TARGET_LINK_LIBRARIES(testUtx unity utx)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/utx)
+TARGET_LINK_LIBRARIES(testUtx unity utx ${NAPPGUI_LIBRARIES} Ws2_32)
 
-ADD_TEST(testSuite testUtx)
+ADD_TEST(testUtx testUtx)

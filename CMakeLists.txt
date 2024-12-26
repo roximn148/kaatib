@@ -7,17 +7,18 @@
 # 
 # Author: roximn <roximn148@gmail.com>
 # ******************************************************************************
-CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.13)
 
-PROJECT(Kaatib)
+PROJECT(kaatib)
 
 FIND_PACKAGE(nappgui REQUIRED)
 INCLUDE("${NAPPGUI_ROOT_PATH}/prj/NAppProject.cmake")
 INCLUDE("${NAPPGUI_ROOT_PATH}/prj/NAppCompilers.cmake")
+INCLUDE_DIRECTORIES("${NAPPGUI_ROOT_PATH}/inc")
 NAP_CONFIG_COMPILER()
 
 NAP_PROJECT_LIBRARY(utx utx)
-NAP_PROJECT_DESKTOP_APP(Kaatib kaatib)
+NAP_PROJECT_DESKTOP_APP(kaatib kaatib)
 
 INCLUDE(CTest)
 ADD_SUBDIRECTORY(unity)
