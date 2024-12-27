@@ -7,9 +7,10 @@
 # 
 # Author: roximn <roximn148@gmail.com>
 # ******************************************************************************
-NAP_DESKTOP_APP(Kaatib "" NRC_EMBEDDED)
+NAP_DESKTOP_APP(kaatib "" NRC_EMBEDDED)
 
-target_sources(Kaatib PRIVATE main.c kaatib.c menus.c)
+TARGET_SOURCES(kaatib PRIVATE main.c kaatib.c menus.c)
+SET_TARGET_PROPERTIES(kaatib PROPERTIES OUTPUT_NAME "kaatib")
 
-NAP_TARGET_C_STANDARD(Kaatib 11)
-NAP_TARGET_CXX_STANDARD(Kaatib 14)
+NAP_TARGET_C_STANDARD(kaatib 11)
+NAP_TARGET_CXX_STANDARD(kaatib 14)
