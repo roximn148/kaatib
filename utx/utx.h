@@ -16,7 +16,18 @@ __EXTERN_C
 _utx_api void utx_start(void);
 _utx_api void utx_finish(void);
 
-_utx_api int utxCreate(const char_t *filePath);
+_utx_api UtxFile* utxCreateNew(void);
+_utx_api UtxFile* utxCreateFromString(String* contents);
+_utx_api UtxFile* utxCreateFromFile(const char_t *filePath);
+_utx_api void utxDestroy(UtxFile** utx);
+
+_utx_api Result utxSetContents(UtxFile* utx, String* contents);
+_utx_api uint32_t utxLength(const UtxFile* utx);
+
+_utx_api Result utxReadContentsFromFile(UtxFile* utx, const char_t *filePath);
+_utx_api Result utxRead(UtxFile* utx, const char_t *filePath);
+_utx_api Result utxWriteContentsToFile(UtxFile* utx, const char_t *filePath);
+_utx_api Result utxWrite(UtxFile* utx, const char_t *filePath);
 
 /*----------------------------------------------------------------------------*/
 __END_C

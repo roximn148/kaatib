@@ -14,10 +14,25 @@
 #include <core/core.hxx>
 
 /*----------------------------------------------------------------------------*/
+typedef struct _utx_file UtxFile;
 struct _utx_file {
-    String* filePath;
+    /* String* filePath; */
+    String* fileFolder;
+    String* fileName;
     String* contents;
     bool_t isModified;
+};
+
+#define FILE_BUFFER_SIZE 1048576
+
+/*----------------------------------------------------------------------------*/
+typedef enum result_t Result;
+enum result_t {
+    ROkay = 0,
+    RInvalidUtxPointer,
+    RInvalidContents,
+    RInvalidFilePath,
+    RFileError,
 };
 
 /*----------------------------------------------------------------------------*/

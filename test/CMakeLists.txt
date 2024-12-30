@@ -11,4 +11,8 @@ ADD_EXECUTABLE(testUtx test_utx.c)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/utx)
 TARGET_LINK_LIBRARIES(testUtx unity utx ${NAPPGUI_LIBRARIES} Ws2_32)
 
+ADD_EXECUTABLE(testKaata test_kaata.c)
+TARGET_LINK_LIBRARIES(testKaata unity ${NAPPGUI_LIBRARIES} Ws2_32)
+
 ADD_TEST(testUtx testUtx)
+ADD_TEST(testKaata testKaata)
