@@ -32,6 +32,16 @@ static void onFileOpen(App *app, Event *e) {
         tc(homeDir));
     if (filePath != NULL) {
         log_printf("Selected File: (%s)", filePath);
+        UtxFile *utx = utxCreateFromFile(filePath);
+        if (utx != NULL) {
+            if (app->utx != NULL) {
+                utxDestroy(&app->utx);
+            }
+            app->utx = utx;
+            
+            textview_clear(app->textview);
+            textview_writef(app->textview, tc(utx->contents));
+        }
     } else {
         log_printf("No file selected");
     }

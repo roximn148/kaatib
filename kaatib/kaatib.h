@@ -8,6 +8,7 @@
 * Author: roximn <roximn148@gmail.com>
 *******************************************************************************/
 #include <nappgui.h>
+#include <utx.h>
 
 /* -------------------------------------------------------------------------- */
 typedef struct _app_t App;
@@ -15,6 +16,7 @@ struct _app_t {
     Window *window;
     Menu *menu;
     TextView *textview;
+    UtxFile *utx;
 };
 
 

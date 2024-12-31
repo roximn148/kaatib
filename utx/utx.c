@@ -32,11 +32,12 @@ UtxFile* utxCreateNew(void) {
     utx->contents = str_c("");
     utx->fileFolder = NULL;
     utx->isModified = FALSE;
+
     return utx;
 }
 
 /*----------------------------------------------------------------------------*/
-UtxFile* utxCreateFromString(String *contents) {
+UtxFile* utxCreateFromString(const String *contents) {
     if (contents == NULL) {
         return NULL;
     }
@@ -66,8 +67,11 @@ UtxFile* utxCreateFromFile(const char_t *filePath) {
     String *folder, *fileName;
     str_split_pathname(filePath, &folder, &fileName);
     str_cat(&folder, "/");
-    str_upd(&(utx->fileName), tc(fileName));
-    str_upd(&(utx->fileFolder), tc(folder));
+    str_upd(&utx->fileName, tc(fileName));
+    str_upd(&utx->fileFolder, tc(folder));
+    str_destroy(&folder);
+    str_destroy(&fileName);
+
     utx->isModified = FALSE;
 
     log_printf("utxCreateFromFile: Created from '%s'", filePath);
@@ -80,16 +84,34 @@ void utxDestroy(UtxFile** utx) {
         return;
     }
 
-    str_destroy(&((*utx)->fileName));
-    str_destroy(&((*utx)->contents));
-    if ((*utx)->fileFolder != NULL) {
-        str_destroy(&((*utx)->fileFolder));
+    UtxFile *u = *utx;
+
+    str_destroy(&u->fileName);
+    str_destroy(&u->contents);
+    if (u->fileFolder != NULL) {
+        str_destroy(&u->fileFolder);
     }
     heap_delete(utx, UtxFile);
 }
 
 /*----------------------------------------------------------------------------*/
-Result utxSetContents(UtxFile* utx, String* contents) {
+void utxDump(const UtxFile* utx) {
+    if (utx == NULL) {
+        log_printf("utxDump: null pointer provided.");
+        return;
+    }
+
+    log_printf("utxDump: fileName: '%s'", tc(utx->fileName));
+    log_printf("utxDump: fileFolder: '%s'", utx->fileFolder != NULL ? tc(utx->fileName) : "NULL");
+
+    log_printf("utxDump: contents: %d bytes, %d chars", str_len(utx->contents), str_nchars(utx->contents));
+    log_printf("utxDump: isModified: %s", utx->isModified ? "TRUE" : "FALSE");
+
+    return;
+}
+
+/*----------------------------------------------------------------------------*/
+Result utxSetContents(UtxFile* utx, const String* contents) {
     if (utx == NULL) {
         return RInvalidUtxPointer;
     }

@@ -41,6 +41,7 @@ String* generateUuid(void) {
 
 /*----------------------------------------------------------------------------*/
 void setUp(void) {
+    heap_verbose(TRUE);
     heap_stats(TRUE);
 }
 

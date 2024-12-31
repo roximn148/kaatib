@@ -17,11 +17,12 @@ _utx_api void utx_start(void);
 _utx_api void utx_finish(void);
 
 _utx_api UtxFile* utxCreateNew(void);
-_utx_api UtxFile* utxCreateFromString(String* contents);
+_utx_api UtxFile* utxCreateFromString(const String* contents);
 _utx_api UtxFile* utxCreateFromFile(const char_t *filePath);
 _utx_api void utxDestroy(UtxFile** utx);
+_utx_api void utxDump(const UtxFile* utx);
 
-_utx_api Result utxSetContents(UtxFile* utx, String* contents);
+_utx_api Result utxSetContents(UtxFile* utx, const String* contents);
 _utx_api uint32_t utxLength(const UtxFile* utx);
 
 _utx_api Result utxReadContentsFromFile(UtxFile* utx, const char_t *filePath);

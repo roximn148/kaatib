@@ -27,6 +27,7 @@ static App *createApp(void) {
 
 /* -------------------------------------------------------------------------- */
 static void destroyApp(App **app) {
+    utxDestroy(&(*app)->utx);
     window_destroy(&(*app)->window);
     menu_destroy(&(*app)->menu);
     heap_delete(app, App);
