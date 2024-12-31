@@ -31,6 +31,18 @@ void tearDown(void) {
 }
 
 /*----------------------------------------------------------------------------*/
+void test_InvertBool(void) {
+    bool_t bool = TRUE;
+
+    TEST_ASSERT_TRUE(bool);
+    TEST_ASSERT_FALSE(!bool);
+
+    bool = FALSE;
+    TEST_ASSERT_FALSE(bool);
+    TEST_ASSERT_TRUE(!bool);
+}
+
+/*----------------------------------------------------------------------------*/
 void test_StringCapacity(void) {
     String *str = str_reserve(10);
     char_t *s = tcc(str);
@@ -90,6 +102,7 @@ void test_StringTrim(void) {
 /*----------------------------------------------------------------------------*/
 int main(void) {
     UNITY_BEGIN();
+    RUN_TEST(test_InvertBool);
     RUN_TEST(test_StringTrim);
     RUN_TEST(test_StringCapacity);
     RUN_TEST(test_WorkingDirectory_Suffix);

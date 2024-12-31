@@ -8,28 +8,35 @@
 * Author: roximn <roximn148@gmail.com>
 *******************************************************************************/
 #include "kaatib.h"
+#include "menus.h"
 #include "icons.h"
 
 /* -------------------------------------------------------------------------- */
 static App *createApp(void) {
+    heap_verbose(TRUE);
+
     App *app = heap_new0(App);
 
     gui_respack(icons_respack);
     gui_language("");
 
-    app->menu = createKaatibMenubar(app);
-    app->window = createKaatibWindow(app);
-    osapp_menubar(app->menu, app->window);
-    window_origin(app->window, v2df(100.f, 100.f));
-    window_show(app->window);
+    app->utx = utxCreateNew();
+    app->isReadOnly = FALSE;
+
+    createKaatibMenubar(app);
+    createKaatibWindow(app);
+    osapp_menubar(app->ui.menu, app->ui.window);
+    window_origin(app->ui.window, v2df(100.f, 100.f));
+    window_show(app->ui.window);
+
     return app;
 }
 
 /* -------------------------------------------------------------------------- */
 static void destroyApp(App **app) {
     utxDestroy(&(*app)->utx);
-    window_destroy(&(*app)->window);
-    menu_destroy(&(*app)->menu);
+    window_destroy(&(*app)->ui.window);
+    menu_destroy(&(*app)->ui.menu);
     heap_delete(app, App);
 }
 

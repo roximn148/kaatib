@@ -119,3 +119,9 @@ for the unicode script rendering.
     ```sh
     git clone https://github.com/ThrowTheSwitch/Unity.git
     ```
+
+
+### Icons
+The icons used are [Material Icons](https://fonts.google.com/icons) by Google.
+The [Iconer](https://iconer.app/material/) website was used for rendering icons
+to png. (Color `#0b6105`, Size `20`, Indent `0`).

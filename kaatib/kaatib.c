@@ -13,7 +13,7 @@
 static void onWindowClose(App *app, Event *e) {
     unref(app);
     unref(e);
-    log_printf("onFileClose clicked");
+    log_printf("Closing main window");
     osapp_finish();
 }
 
@@ -24,8 +24,8 @@ static Panel *createCentralPanel(App *app) {
     textview_fsize(text, 24);
     textview_halign(text, ekRIGHT);
     textview_lspacing(text, 1.2);
-    textview_editable(text, TRUE);
-    app->textview = text;
+    textview_editable(text, !app->isReadOnly);
+    app->ui.textview = text;
     
     Panel *panel = panel_create();
     Layout *layout = layout_create(1, 1);
@@ -38,27 +38,17 @@ static Panel *createCentralPanel(App *app) {
     return panel;
 }
 
-/* -------------------------------------------------------------------------- */
-Menu *createKaatibMenubar(App *app) {
-    Menu *menu = menu_create();
 
-    menu_item(menu, createFileMenu(app));
-    menu_item(menu, createEditMenu(app));
-    menu_item(menu, createViewMenu(app));
-    menu_item(menu, createHelpMenu(app));
-
-    return menu;
-}
 
 /* -------------------------------------------------------------------------- */
-Window *createKaatibWindow(App *app) {
+void createKaatibWindow(App *app) {
     Panel *panel = createCentralPanel(app);
     Window *window = window_create(ekWINDOW_STDRES);
     window_panel(window, panel);
     window_title(window, "Kaatib");
     window_OnClose(window, listener(app, onWindowClose, App));
 
-    return window;
+    app->ui.window = window;
 }
 
 /* -------------------------------------------------------------------------- */

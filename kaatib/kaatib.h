@@ -7,26 +7,46 @@
 *
 * Author: roximn <roximn148@gmail.com>
 *******************************************************************************/
+#ifndef __KAATIB_H__
+#define __KAATIB_H__
+/*----------------------------------------------------------------------------*/
 #include <nappgui.h>
 #include <utx.h>
 
 /* -------------------------------------------------------------------------- */
 typedef struct _app_t App;
 struct _app_t {
-    Window *window;
-    Menu *menu;
-    TextView *textview;
+    bool_t isReadOnly;
     UtxFile *utx;
+    struct _ui_t {
+        Window *window;
+        Menu *menu;
+        MenuItem *miNew;
+        MenuItem *miOpen;
+        MenuItem *miSave;
+        MenuItem *miRevert;
+        MenuItem *miRecent;
+
+        MenuItem *miUndo;
+        MenuItem *miRedo;
+        MenuItem *miCopy;
+        MenuItem *miCut;
+        MenuItem *miPaste;
+        MenuItem *miSelectAll;
+        MenuItem *miReadOnly;
+
+        MenuItem *miWhitespace;        
+        MenuItem *miKeyboard;
+
+        MenuItem *miAbout;
+
+        TextView *textview;
+    } ui;
 };
 
-
 /* -------------------------------------------------------------------------- */
-Window *createKaatibWindow(App*);
-Menu *createKaatibMenubar(App*);
+void createKaatibWindow(App*);
 
-MenuItem *createFileMenu(App*);
-MenuItem *createEditMenu(App*);
-MenuItem *createViewMenu(App*);
-MenuItem *createHelpMenu(App*);
-
-/* -------------------------------------------------------------------------- */
+/*----------------------------------------------------------------------------*/
+# endif /* __KAATIB_H__ */
+/*----------------------------------------------------------------------------*/
