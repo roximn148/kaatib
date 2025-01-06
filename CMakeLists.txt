@@ -33,6 +33,6 @@ NAP_PROJECT_DESKTOP_APP(kaatib kaatib)
 # Testing
 include(CTest)
 if(BUILD_TESTING)
-    ADD_SUBDIRECTORY(unity)
+    ADD_SUBDIRECTORY(Unity)
     ADD_SUBDIRECTORY(tests)
 endif()

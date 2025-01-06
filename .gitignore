@@ -54,12 +54,10 @@ dkms.conf
 # build directory
 build/
 
-# Unity unittest source
-# unity/
-
 # vscode specifics
 .vscode/
 
+# CMake specifics
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
