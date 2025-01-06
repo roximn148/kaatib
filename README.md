@@ -23,35 +23,50 @@ for the unicode script rendering.
 ## Setup
 ### Windows
 * Build Tools
-  * MSVC
-    
-    From the terinal run,
+  * **MSVC**:  
+
+    From the terminal run,
     ```sh
-    winget install Microsoft.VisualStudio.2022.BuildTools --force --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended"
+    winget install Microsoft.VisualStudio.2022.BuildTools --force
+    --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended"
     ```
+--------------------------------------------------------------------------------
+**NOTE**
 
-    and for all the subsequent commands use the **Developer Comaand Prompt for VS 2022**.
+* for all the subsequent commands use the **Developer Command Prompt for VS 2022**.
+* `CMake` comes bundled with `MSVC` installation, so no need to install separately.
 
-    `CMake` comes bundled with `MSVC` installation, so no need to install separately.
+--------------------------------------------------------------------------------
 
 * [NAppGui](https://nappgui.com/en/guide/build.html)
 
     GUI framework for the application.
 
-    ```sh
-    git clone --depth 1 https://github.com/frang75/nappgui_src.git
-    cd nappgui_src
+    1. Download source
+        ```sh
+        git clone --depth 1 https://github.com/frang75/nappgui_src.git
+        cd nappgui_src
+        ```
 
-    cmake -S . -B build -DNAPPGUI_DEMO=NO
-    cmake --build build --config Release -j 4
-    cmake --install build --config Release --prefix C:/nappgui
-    ```
+    2. Build debug version
+        ```sh
+        cmake -S . -B build -DNAPPGUI_DEMO=NO
+        cmake --build build/static-debug --config Debug -j 4
+        cmake --install build/static-debug --config Debug --prefix C:/nappgui/static-debug
+        ```
 
-    This configures, builds the `Release` version of the framework and installs it to the specified location (`c:/nappgui` in the above instructions.)
+    3. Build the release version
+        ```sh
+        cmake -S . -B build -DNAPPGUI_DEMO=NO
+        cmake --build build/static-release --config Release -j 4
+        cmake --install build/static-release --config Release --prefix C:/nappgui/static-release
+        ```
+
+    This configures, builds (statically linking versions of the framework) and installs them to the specified location (`c:/nappgui` in the above instructions.) with both `Debug` and `Release` flavors.
 
 * [Kaatib](https://github.com/roximn148/kaatib)
     
-    Get the `Kaatib` source code.
+    Get the `kaatib` source code.
     ```sh
     git clone https://github.com/roximn148/kaatib.git
     cd kaatib
@@ -62,29 +77,74 @@ for the unicode script rendering.
     For unit testing.
     
     In the `Kaatib` source directory download the `Unity` source code.
-
     ```sh
     git clone https://github.com/ThrowTheSwitch/Unity.git
     ```
 
+* VCPKG
+
+    Install [`vcpkg`](https://vcpkg.io/), if not already installed,
+    ```sh
+    git clone https://github.com/microsoft/vcpkg.git
+    cd vcpkg && bootstrap-vcpkg.bat
+    ```
+
 * Build
 
-  For building, provide the installation location of the `NAppGui`.
-  ```sh
-  cmake -S . -B build -DCMAKE_INSTALL_PREFIX=c:/nappgui
-  cmake --build build
-  ```
+    1. Define presets,
+   
+        For building, create cmake presets file `CMakeUserPresets.json` in the project root directory, for `debug` and `release` builds as well as providing the paths to `nappgui` and `vcpkg`.
+        ```json
+        {
+            "version": 4,
+            "configurePresets": [
+                {
+                    "name": "debug",
+                    "inherits": "x64-debug",
+                    "environment": {
+                        "NAPPGUI_ROOT": "c:\\nappgui",
+                        "VCPKG_ROOT": "<path/to/vcpkg>"
+                    }
+                },
+                {
+                    "name": "release",
+                    "inherits": "x64-release",
+                    "environment": {
+                        "NAPPGUI_ROOT": "C:\\nappgui",
+                        "VCPKG_ROOT": "<path/to/vcpkg>"
+                    }
+                }
+            ],
+            "buildPresets": [
+                {
+                    "name": "debug",
+                    "displayName": "Windows Debug build",
+                    "configurePreset": "debug",
+                    "description": "Vanilla debug build for windows"
+                },
+                {
+                    "name": "release",
+                    "displayName": "Windows Release build",
+                    "configurePreset": "release",
+                    "description": "Vanilla release build for windows"
+                }
+            ]
+        }
+        ```
 
-  For Visual Studio Code, add following to the `settings.json`.
-  ```json
-  {
-    "cmake.configureArgs": [
-        "-DCMAKE_INSTALL_PREFIX=c:/nappgui"
-    ]
-  }
-  ```
-  
-### Linux
+    2. select a configure preset, (`debug` or `release`),
+
+        ```sh
+        cmake --preset=debug
+        ```
+    
+    3. build the project.
+
+        ```sh
+        cmake --build --preset=debug
+        ```
+
+### Linux (_untested incomplete_)
 * Build Tools
 
 * [NAppGui](https://nappgui.com/en/guide/build.html)

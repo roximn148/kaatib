@@ -5,7 +5,7 @@
             "name": "base",
             "description": "Base preset",
             "generator": "Ninja",
-            "hidden": false,
+            "hidden": true,
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -35,25 +35,15 @@
             "name": "x64-release",
             "displayName": "x64 Release",
             "description": "Sets release build type",
-            "inherits": "x64-debug",
+            "inherits": "base",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
             "cacheVariables": {
                 "CMAKE_INSTALL_PREFIX": "$env{NAPPGUI_ROOT}/static-release",
                 "CMAKE_BUILD_TYPE": "Release"
             }
-        }
-    ],
-    "buildPresets": [
-        {
-            "name": "debug-build-windows",
-            "displayName": "Default Windows",
-            "configurePreset": "x64-debug",
-            "description": "Vanilla debug build"
-        },
-        {
-            "name": "release-build-windows",
-            "displayName": "Windows Release",
-            "configurePreset": "x64-release",
-            "description": "Vanilla release build"
         }
     ]
 }
