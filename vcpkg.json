@@ -1,4 +1,10 @@
 {
+  "name": "kaatib",
+  "version": "0.1.0",
   "dependencies": [
+    "freetype",
+    "harfbuzz",
+    "fribidi",
+    "libraqm"
   ]
 }

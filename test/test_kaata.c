@@ -17,6 +17,8 @@
 #include <core/hfile.h>
 #include <sewer/bmath.h>
 
+#include <raqm.h>
+
 #include "unity.h"
 #include "utx.h"
 
@@ -31,15 +33,22 @@ void tearDown(void) {
 }
 
 /*----------------------------------------------------------------------------*/
+void test_RaqmLink(void) {
+    unsigned int major, minor, patch;
+    raqm_version(&major, &minor, &patch);
+    fprintf(stderr, "Raqm version: %d.%d.%d\n", major, minor, patch);
+}
+
+/*----------------------------------------------------------------------------*/
 void test_InvertBool(void) {
-    bool_t bool = TRUE;
+    bool_t b = TRUE;
 
-    TEST_ASSERT_TRUE(bool);
-    TEST_ASSERT_FALSE(!bool);
+    TEST_ASSERT_TRUE(b);
+    TEST_ASSERT_FALSE(!b);
 
-    bool = FALSE;
-    TEST_ASSERT_FALSE(bool);
-    TEST_ASSERT_TRUE(!bool);
+    b = FALSE;
+    TEST_ASSERT_FALSE(b);
+    TEST_ASSERT_TRUE(!b);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -106,6 +115,8 @@ int main(void) {
     RUN_TEST(test_StringTrim);
     RUN_TEST(test_StringCapacity);
     RUN_TEST(test_WorkingDirectory_Suffix);
+
+    RUN_TEST(test_RaqmLink);
     return UNITY_END();
 }
 

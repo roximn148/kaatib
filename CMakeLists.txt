@@ -8,8 +8,14 @@
 # Author: roximn <roximn148@gmail.com>
 # ******************************************************************************
 CMAKE_MINIMUM_REQUIRED(VERSION 3.13)
+# set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-PROJECT(kaatib)
+PROJECT(
+    kaatib
+    VERSION 0.1.0
+    DESCRIPTION "Unicode Urdu text editor"
+    LANGUAGES C CXX
+)
 
 FIND_PACKAGE(nappgui REQUIRED)
 INCLUDE("${NAPPGUI_ROOT_PATH}/prj/NAppProject.cmake")

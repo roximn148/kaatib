@@ -7,12 +7,28 @@
 # 
 # Author: roximn <roximn148@gmail.com>
 # ******************************************************************************
+
 ADD_EXECUTABLE(testUtx test_utx.c)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/utx)
 TARGET_LINK_LIBRARIES(testUtx unity utx ${NAPPGUI_LIBRARIES} Ws2_32)
 
+FIND_PACKAGE(Freetype)
+FIND_PACKAGE(harfbuzz)
+
+SET(RAQM_INCLUDE_DIR ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include)
+SET(RAQM_LIB_DIR ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib)
+
 ADD_EXECUTABLE(testKaata test_kaata.c)
-TARGET_LINK_LIBRARIES(testKaata unity ${NAPPGUI_LIBRARIES} Ws2_32)
+INCLUDE_DIRECTORIES(${RAQM_INCLUDE_DIR})
+TARGET_LINK_DIRECTORIES(testKaata PRIVATE ${RAQM_LIB_DIR})
+TARGET_LINK_LIBRARIES(testKaata
+    PRIVATE unity
+    PRIVATE ${NAPPGUI_LIBRARIES} Ws2_32
+    PRIVATE raqm
+    PRIVATE fribidi
+    PRIVATE harfbuzz::harfbuzz
+    PRIVATE Freetype::Freetype
+)
 
 ADD_TEST(testUtx testUtx)
 ADD_TEST(testKaata testKaata)

@@ -1,13 +1,59 @@
 {
-    "version": 2,
+    "version": 4,
     "configurePresets": [
         {
-            "name": "vcpkg",
+            "name": "base",
+            "description": "Base preset",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
+            "hidden": false,
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
             }
+        },
+        {
+            "name": "x64-debug",
+            "displayName": "x64 Debug",
+            "description": "Sets debug build type and x64 arch",
+            "inherits": "base",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "$env{NAPPGUI_ROOT}/static-debug",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "x64-release",
+            "displayName": "x64 Release",
+            "description": "Sets release build type",
+            "inherits": "x64-debug",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "$env{NAPPGUI_ROOT}/static-release",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug-build-windows",
+            "displayName": "Default Windows",
+            "configurePreset": "x64-debug",
+            "description": "Vanilla debug build"
+        },
+        {
+            "name": "release-build-windows",
+            "displayName": "Windows Release",
+            "configurePreset": "x64-release",
+            "description": "Vanilla release build"
         }
     ]
 }
