@@ -80,15 +80,6 @@ for the unicode script rendering.
     cd kaatib
     ```
 
-* [Unity](https://github.com/ThrowTheSwitch/Unity)
-
-    For unit testing.
-    
-    In the `Kaatib` source directory download the `Unity` source code.
-    ```sh
-    git clone https://github.com/ThrowTheSwitch/Unity.git
-    ```
-
 * Build
 
     1. Define presets,
