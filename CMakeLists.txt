@@ -8,7 +8,6 @@
 # Author: roximn <roximn148@gmail.com>
 # ******************************************************************************
 CMAKE_MINIMUM_REQUIRED(VERSION 3.13)
-# set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 PROJECT(
     kaatib
@@ -17,15 +16,23 @@ PROJECT(
     LANGUAGES C CXX
 )
 
+# Update the submodules
+include(cmake/UpdateSubmodules.cmake)
+
+# NAppGUI
 FIND_PACKAGE(nappgui REQUIRED)
 INCLUDE("${NAPPGUI_ROOT_PATH}/prj/NAppProject.cmake")
 INCLUDE("${NAPPGUI_ROOT_PATH}/prj/NAppCompilers.cmake")
 INCLUDE_DIRECTORIES("${NAPPGUI_ROOT_PATH}/inc")
 NAP_CONFIG_COMPILER()
 
+# Kaatib project
 NAP_PROJECT_LIBRARY(utx utx)
 NAP_PROJECT_DESKTOP_APP(kaatib kaatib)
 
-INCLUDE(CTest)
-ADD_SUBDIRECTORY(unity)
-ADD_SUBDIRECTORY(test)
+# Testing
+include(CTest)
+if(BUILD_TESTING)
+    ADD_SUBDIRECTORY(unity)
+    ADD_SUBDIRECTORY(tests)
+endif()

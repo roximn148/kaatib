@@ -55,7 +55,7 @@ dkms.conf
 build/
 
 # Unity unittest source
-unity/
+# unity/
 
 # vscode specifics
 .vscode/
