@@ -64,6 +64,14 @@ for the unicode script rendering.
 
     This configures, builds (statically linking versions of the framework) and installs them to the specified location (`c:/nappgui` in the above instructions.) with both `Debug` and `Release` flavors.
 
+* [`vcpkg`](https://vcpkg.io/)
+
+    Install `vcpkg`, if not already installed,
+    ```sh
+    git clone https://github.com/microsoft/vcpkg.git
+    cd vcpkg && bootstrap-vcpkg.bat
+    ```
+
 * [Kaatib](https://github.com/roximn148/kaatib)
     
     Get the `kaatib` source code.
@@ -79,14 +87,6 @@ for the unicode script rendering.
     In the `Kaatib` source directory download the `Unity` source code.
     ```sh
     git clone https://github.com/ThrowTheSwitch/Unity.git
-    ```
-
-* VCPKG
-
-    Install [`vcpkg`](https://vcpkg.io/), if not already installed,
-    ```sh
-    git clone https://github.com/microsoft/vcpkg.git
-    cd vcpkg && bootstrap-vcpkg.bat
     ```
 
 * Build
