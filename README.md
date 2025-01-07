@@ -50,19 +50,21 @@ for the unicode script rendering.
 
     2. Build debug version
         ```sh
-        cmake -S . -B build -DNAPPGUI_DEMO=NO
+        cmake -S . -B build/static-debug -DNAPPGUI_DEMO=NO
         cmake --build build/static-debug --config Debug -j 4
         cmake --install build/static-debug --config Debug --prefix C:/nappgui/static-debug
         ```
 
     3. Build the release version
         ```sh
-        cmake -S . -B build -DNAPPGUI_DEMO=NO
+        cmake -S . -B build/static-release -DNAPPGUI_DEMO=NO
         cmake --build build/static-release --config Release -j 4
         cmake --install build/static-release --config Release --prefix C:/nappgui/static-release
         ```
 
-    This configures, builds (statically linking versions of the framework) and installs them to the specified location (`c:/nappgui` in the above instructions.) with both `Debug` and `Release` flavors.
+    This configures, builds (statically linking versions of the framework) and
+    installs them to the specified location (`c:/nappgui` in the above 
+    instructions.) with both `Debug` and `Release` flavors.
 
 * [`vcpkg`](https://vcpkg.io/)
 
@@ -84,7 +86,9 @@ for the unicode script rendering.
 
     1. Define presets,
    
-        For building, create cmake presets file `CMakeUserPresets.json` in the project root directory, for `debug` and `release` builds as well as providing the paths to `nappgui` and `vcpkg`.
+        For building, create cmake presets file `CMakeUserPresets.json` in the 
+        project root directory, for `debug` and `release` builds as well as 
+        providing the paths to `nappgui` and `vcpkg` as environment variables.
         ```json
         {
             "version": 4,
@@ -135,7 +139,7 @@ for the unicode script rendering.
         cmake --build --preset=debug
         ```
 
-### Linux (_untested incomplete_)
+### Linux (_incomplete & untested_)
 * Build Tools
 
 * [NAppGui](https://nappgui.com/en/guide/build.html)
@@ -151,7 +155,8 @@ for the unicode script rendering.
     cmake --install build --config Release --prefix /usr/local/nappgui
     ```
 
-    This configures and builds the `Release` version of the framework at the specified location (`/usr/local/nappgui` in the above instructions.)
+    This configures and builds the `Release` version of the framework at the 
+    specified location (`/usr/local/nappgui` in the above instructions.)
 
 * [Kaatib](https://github.com/roximn148/kaatib)
     
