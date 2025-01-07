@@ -27,7 +27,7 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_INSTALL_PREFIX": "$env{NAPPGUI_ROOT}/static-debug",
+                "CMAKE_PREFIX_PATH": "$env{NAPPGUI_ROOT}/static-debug",
                 "CMAKE_BUILD_TYPE": "Debug"
             }
         },
@@ -41,7 +41,7 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_INSTALL_PREFIX": "$env{NAPPGUI_ROOT}/static-release",
+                "CMAKE_PREFIX_PATH": "$env{NAPPGUI_ROOT}/static-release",
                 "CMAKE_BUILD_TYPE": "Release"
             }
         }
