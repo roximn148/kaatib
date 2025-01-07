@@ -50,14 +50,14 @@ for the unicode script rendering.
 
     2. Build debug version
         ```sh
-        cmake -S . -B build -DNAPPGUI_DEMO=NO
+        cmake -S . -B build/static-debug -DNAPPGUI_DEMO=NO
         cmake --build build/static-debug --config Debug -j 4
         cmake --install build/static-debug --config Debug --prefix C:/nappgui/static-debug
         ```
 
     3. Build the release version
         ```sh
-        cmake -S . -B build -DNAPPGUI_DEMO=NO
+        cmake -S . -B build/static-release -DNAPPGUI_DEMO=NO
         cmake --build build/static-release --config Release -j 4
         cmake --install build/static-release --config Release --prefix C:/nappgui/static-release
         ```
