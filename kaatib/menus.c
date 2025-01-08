@@ -7,6 +7,12 @@
 *
 * Author: roximn <roximn148@gmail.com>
 *******************************************************************************/
+/** ----------------------------------------------------------------------------
+ * @file menus.c
+ * @author roximn
+ * @date 07 Jan 2025
+ * @brief Kaatib application GUI menu creation and handlers.
+ * -------------------------------------------------------------------------- */
 #include "kaatib.h"
 #include "icons.h"
 

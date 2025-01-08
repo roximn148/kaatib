@@ -41,6 +41,7 @@ struct _app_t {
         MenuItem *miAbout;
 
         TextView *textview;
+        View *utv;
     } ui;
 };
 

@@ -9,7 +9,18 @@
 # ******************************************************************************
 NAP_DESKTOP_APP(kaatib "" NRC_EMBEDDED)
 
-TARGET_SOURCES(kaatib PRIVATE main.c kaatib.c menus.c)
+set(SOURCES
+    main.c
+    kaatib.c
+    main.c
+)
+
+set(HEADERS
+    kaatib.h
+    menus.h
+)
+
+TARGET_SOURCES(kaatib PRIVATE ${SOURCES} ${HEADERS})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/utx)
 SET_TARGET_PROPERTIES(kaatib PROPERTIES OUTPUT_NAME "kaatib")
 TARGET_LINK_LIBRARIES(kaatib utx)

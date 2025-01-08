@@ -7,11 +7,24 @@
 *
 * Author: roximn <roximn148@gmail.com>
 *******************************************************************************/
+/** ----------------------------------------------------------------------------
+ * @file main.c
+ * @author roximn
+ * @date 27 Dec 2024
+ * @brief Kaatib application entry point.
+ *
+ * The kaatib application main entry point. Constructor and destructor 
+ * function definitions.
+ * -------------------------------------------------------------------------- */
 #include "kaatib.h"
 #include "menus.h"
 #include "icons.h"
 
-/* -------------------------------------------------------------------------- */
+/** ----------------------------------------------------------------------------
+ * Kaatib application constructor
+ *
+ * @return @c App* newly constructed application.
+ * -------------------------------------------------------------------------- */
 static App *createApp(void) {
     heap_verbose(TRUE);
 
@@ -32,8 +45,16 @@ static App *createApp(void) {
     return app;
 }
 
-/* -------------------------------------------------------------------------- */
+/** ----------------------------------------------------------------------------
+ * Kaatib application destructor
+ *
+ * @param[in,out] app Address of App* to destroy and nullify.
+ * 
+ * @pre app != NULL
+ * -------------------------------------------------------------------------- */
 static void destroyApp(App **app) {
+    cassert(app != NULL);
+
     utxDestroy(&(*app)->utx);
     window_destroy(&(*app)->ui.window);
     menu_destroy(&(*app)->ui.menu);
@@ -43,6 +64,6 @@ static void destroyApp(App **app) {
 /* -------------------------------------------------------------------------- */
 #include <osapp/osmain.h>
 const char_t options[] = "";
-osmain(createApp, destroyApp, options, App)
+osmain(createApp, destroyApp, options, App);  /**< NAppGui main */
 
 /* -------------------------------------------------------------------------- */

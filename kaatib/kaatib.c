@@ -7,6 +7,12 @@
 *
 * Author: roximn <roximn148@gmail.com>
 *******************************************************************************/
+/** ----------------------------------------------------------------------------
+ * @file kaatib.c
+ * @author roximn
+ * @date 28 Dec 2024
+ * @brief Kaatib application GUI window.
+ * -------------------------------------------------------------------------- */
 #include "kaatib.h"
 
 /* -------------------------------------------------------------------------- */
@@ -18,6 +24,15 @@ static void onWindowClose(App *app, Event *e) {
 }
 
 /* -------------------------------------------------------------------------- */
+static void onDrawView(App *app, Event *e) {
+    const EvDraw *p = event_params(e, EvDraw);
+    draw_clear(p->ctx, kCOLOR_RED);
+    draw_line_width(p->ctx, 10.f);
+    draw_line_color(p->ctx, kCOLOR_GREEN);
+    draw_rect(p->ctx, ekSTROKE, 0, 0, p->width, p->height);
+}
+
+/* -------------------------------------------------------------------------- */
 static Panel *createCentralPanel(App *app) {
     TextView *text = textview_create();
     textview_family(text, "Calibri");
@@ -26,19 +41,25 @@ static Panel *createCentralPanel(App *app) {
     textview_lspacing(text, 1.2);
     textview_editable(text, !app->isReadOnly);
     app->ui.textview = text;
+
+    View *utv = view_create();
+    view_OnDraw(utv, listener(app, onDrawView, App));
+    app->ui.utv = utv;
     
     Panel *panel = panel_create();
-    Layout *layout = layout_create(1, 1);
+    Layout *layout = layout_create(1, 2);
+    
     layout_textview(layout, text, 0, 0);
+    layout_view(layout, utv, 0, 1);
+
     layout_hsize(layout, 0, 800);
-    layout_vsize(layout, 0, 450);
+    layout_vsize(layout, 0, 200); 
+    layout_vsize(layout, 1, 200); 
     layout_margin(layout, 2);
     panel_layout(panel, layout);
 
     return panel;
 }
-
-
 
 /* -------------------------------------------------------------------------- */
 void createKaatibWindow(App *app) {
