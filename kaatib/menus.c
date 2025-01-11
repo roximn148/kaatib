@@ -13,6 +13,10 @@
  * @date 07 Jan 2025
  * @brief Kaatib application GUI menu creation and handlers.
  * -------------------------------------------------------------------------- */
+#include <raqm.h>
+#include <core/core.hxx>
+#include <core/strings.h>
+
 #include "kaatib.h"
 #include "icons.h"
 
@@ -21,6 +25,62 @@ static void onFileNew(App *app, Event *e) {
     unref(app);
     unref(e);
     log_printf("onFileNew clicked");
+}
+
+/* -------------------------------------------------------------------------- */
+static void layoutText(const String *text) {
+    const char *fontfile = "c:\\windows\\fonts\\calibri.ttf";
+
+    FT_Library library = NULL;
+    FT_Face face = NULL;
+
+    if (FT_Init_FreeType(&library) != 0) {
+        return;
+    }
+
+    if (FT_New_Face(library, fontfile, 0, &face) != 0) {
+        FT_Done_FreeType (library);
+        return;
+    }
+
+    if (FT_Set_Char_Size (face, face->units_per_EM, 0, 0, 0) != 0) {
+        FT_Done_Face (face);
+        FT_Done_FreeType (library);
+        return;
+    }
+
+
+    raqm_t *rq = raqm_create ();
+    if (rq != NULL) {
+        raqm_set_text_utf8(rq, tc(text), str_len(text));
+        raqm_set_freetype_face(rq, face);
+        raqm_set_par_direction(rq, RAQM_DIRECTION_RTL);
+        String *language = str_c("urd");
+        raqm_set_language (rq, tc(language), 0, str_len(language));
+
+        if (raqm_layout(rq)) {
+            size_t count, i;
+              raqm_glyph_t *glyphs = raqm_get_glyphs (rq, &count);
+              log_printf("glyph count: %zu", count);
+              for (i = 0; i < count; i++) {
+                log_printf ("gid#%d off: (%d, %d) adv: (%d, %d) idx: %d",
+                    glyphs[i].index,
+                    glyphs[i].x_offset,
+                    glyphs[i].y_offset,
+                    glyphs[i].x_advance,
+                    glyphs[i].y_advance,
+                    glyphs[i].cluster);
+              }
+        } else {
+            log_printf("raqm layout failed.");
+        }
+
+        str_destroy(&language);
+        raqm_destroy(rq);
+    }
+
+    FT_Done_Face(face);
+    FT_Done_FreeType(library);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -45,6 +105,8 @@ static void onFileOpen(App *app, Event *e) {
             
             textview_clear(app->ui.textview);
             textview_writef(app->ui.textview, tc(utx->contents));
+
+            layoutText(utx->contents);
         }
     } else {
         log_printf("No file selected");

@@ -36,7 +36,6 @@ static void onDrawView(App *app, Event *e) {
     const color_t CPaperYellow = color_hsbf(0.167f, 0.05f, 1.0f);
     const color_t CMarginRed = color_hsbf(0.f, 0.33f, 0.96f);
     const color_t CGrey = color_gray(224);
-    unref(CGrey);
 
     const EvDraw *p = event_params(e, EvDraw);
     DCtx *ctx = p->ctx;
