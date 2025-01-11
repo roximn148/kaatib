@@ -25,14 +25,13 @@ void utx_finish(void) {}
 
 
 /** ----------------------------------------------------------------------------
- * @brief Creates a new UtxFile instance from scratch.
+ * @brief Creates a new `UtxFile` instance from scratch.
  *
- * This function creates a new UtxFile instance with default settings. A default
- * fileName is generated based on the counter value. fileFolder is set to NULL.
+ * This function creates a new `UtxFile` instance with default settings. A default
+ * `fileName` is generated based on the counter value. `fileFolder` is set to `NULL`.
  *
- * @param None
+ * @return A pointer to the newly created `UtxFile` instance.
  *
- * @return A pointer to the newly created UtxFile instance
  * -------------------------------------------------------------------------- */
 UtxFile* utxCreateNew(void) {
     UtxFile *utx = heap_new0(UtxFile);
@@ -47,14 +46,15 @@ UtxFile* utxCreateNew(void) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Creates a new UtxFile instance from a given contents string.
+ * @brief Creates a new `UtxFile` instance from contents of a given string.
  *
- * This function creates a new UtxFile instance with the specified contents.
- * Default fileName is generated with NULL fileFolder.
+ * This function creates a new `UtxFile` instance with the specified contents.
+ * Default `fileName` is generated with `NULL` fileFolder.
  *
- * @param[in] contents The contents of the new UtxFile
+ * @param[in] contents `char_t*` pointing to the contents of the new `UtxFile`.
  *
- * @return A pointer to the newly created UtxFile instance
+ * @return A pointer to the newly created `UtxFile` instance.
+ *
  * -------------------------------------------------------------------------- */
 UtxFile* utxCreateFromString(const String *contents) {
     if (contents == NULL) {
@@ -71,15 +71,16 @@ UtxFile* utxCreateFromString(const String *contents) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Creates a new UtxFile instance from a file path.
+ * @brief Creates a new `UtxFile` instance from given file path.
  *
- * This function creates a new UtxFile instance by reading its contents from
- * the specified file path. The fileName and fileFolder is extracted from the
- * given filePath.
+ * This function creates a new `UtxFile` instance by reading its contents from
+ * the specified file path. The `fileName` and `fileFolder` is extracted from the
+ * given @p filePath.
  *
- * @param[in] filePath The file path to read the UtxFile contents from
+ * @param[in] filePath The file path to read the `UtxFile` contents from
  *
- * @return A pointer to the newly created UtxFile instance
+ * @return A pointer to the newly created `UtxFile` instance
+ *
  * -------------------------------------------------------------------------- */
 UtxFile* utxCreateFromFile(const char_t *filePath) {
     if (filePath == NULL) {
@@ -108,13 +109,14 @@ UtxFile* utxCreateFromFile(const char_t *filePath) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Destroys a UtxFile instance and frees its resources.
+ * @brief Destroys a `UtxFile` instance and frees its resources.
  *
- * This function is called when closing or deleting a UtxFile instance and
+ * This function is called when closing or deleting a `UtxFile` instance and
  * should be used as a cleanup method.
  *
- * @param[in, out] utx A pointer to the UtxFile instance to destroy. The pointer
- * is set to NULL on return.
+ * @param[in, out] utx A pointer to the `UtxFile` instance to destroy. The pointer
+ * is set to `NULL` on return.
+ *
  * -------------------------------------------------------------------------- */
 void utxDestroy(UtxFile** utx) {
     if (utx == NULL) {
@@ -132,12 +134,13 @@ void utxDestroy(UtxFile** utx) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Dumps the contents of a UtxFile instance to the log.
+ * @brief Dumps the contents of a `UtxFile` instance to the log.
  *
- * This function prints out various information about the UtxFile instance,
- * such as its fileName, fileFolder, contents length and modification flag.
+ * This function prints out various information about the `UtxFile` instance,
+ * such as its `fileName`, `fileFolder`, contents length and modification flag.
  *
- * @param utx A pointer to the UtxFile instance to dump
+ * @param utx A pointer to the `UtxFile` instance to dump
+ *
  * -------------------------------------------------------------------------- */
 void utxDump(const UtxFile* utx) {
     if (utx == NULL) {
@@ -158,16 +161,17 @@ void utxDump(const UtxFile* utx) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Processes the raw contents of a UtxFile instance.
+ * @brief Processes the raw contents of a `UtxFile` instance.
  *
- * This function is called by the utxSetContents function and should be used to
- * handle any  processing of the UtxFile contents. It breaks down the given
+ * This function is called by the `utxSetContents` function and should be used to
+ * handle any processing of the `UtxFile` contents. It breaks down the given
  * string into paragraphs based on a list of paragraph separators.
  *
- * @param[in] utx A pointer to the UtxFile instance
- * @param[in] contents The contents string of the UtxFile instance
+ * @param[in] utx A pointer to the `UtxFile` instance
+ * @param[in] contents The contents string of the `UtxFile` instance
  *
  * @return An error code indicating success or failure
+ *
  * -------------------------------------------------------------------------- */
 static Result processContents(UtxFile* utx, const String* contents) {
     unref(utx);
@@ -176,14 +180,15 @@ static Result processContents(UtxFile* utx, const String* contents) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Sets the contents of a UtxFile instance.
+ * @brief Sets the contents of a `UtxFile` instance.
  *
- * This function updates the file name and contents length of the UtxFile instance.
+ * This function updates the file name and contents length of the `UtxFile` instance.
  *
- * @param utx A pointer to the UtxFile instance
- * @param contents The new contents string for the UtxFile instance
+ * @param utx A pointer to the `UtxFile` instance
+ * @param contents The new contents string for the `UtxFile` instance
  *
  * @return An error code indicating success or failure
+ *
  * -------------------------------------------------------------------------- */
 Result utxSetContents(UtxFile* utx, const String* contents) {
     if (utx == NULL) {
@@ -202,14 +207,15 @@ Result utxSetContents(UtxFile* utx, const String* contents) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Returns the length of a UtxFile instance's contents.
+ * @brief Returns the length of a `UtxFile` instance's contents.
  *
  * This function returns the number of bytes in the contents of the
- * UtxFile instance.
+ * `UtxFile` instance.
  *
- * @param[in] utx A pointer to the UtxFile instance
+ * @param[in] utx A pointer to the `UtxFile` instance
  *
- * @return The length of the UtxFile instance's contents
+ * @return The length of the `UtxFile` instance's contents
+ *
  * -------------------------------------------------------------------------- */
 uint32_t utxLength(const UtxFile* utx) {
     if (utx == NULL) {
@@ -219,18 +225,19 @@ uint32_t utxLength(const UtxFile* utx) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Reads the contents of a file into a UtxFile instance.
+ * @brief Reads the contents of a file into a `UtxFile` instance.
  *
  * This function reads the contents of a file specified by @p filePath and
- * stores it in the UtxFile instance pointed to by @p utx. The contents are
+ * stores it in the `UtxFile` instance pointed to by @p utx. The contents are
  * read as a null-terminated string, which is stored in the `contents` member
- * of the UtxFile instance. If an error occurs during reading, the function
+ * of the `UtxFile` instance. If an error occurs during reading, the function
  * returns an error code and logs an error message to the system log.
  *
- * @param[in] utx The UTX buffer where the file contents will be stored.
+ * @param[in] utx Pointer to `UtxFile` instance where the file contents will be stored.
  * @param[in] filePath The path to the file whose contents should be read.
  *
- * @return ROkay if the operation was successful, or an error code otherwise.
+ * @return `ROkay` if the operation was successful, or an error code otherwise.
+ *
  * -------------------------------------------------------------------------- */
 Result utxReadContentsFromFile(UtxFile* utx, const char_t *filePath) {
     if (utx == NULL) {
@@ -255,18 +262,19 @@ Result utxReadContentsFromFile(UtxFile* utx, const char_t *filePath) {
     return ROkay;
 }
 /** ----------------------------------------------------------------------------
- * @brief Reads the contents of a file into a UtxFile instance.
+ * @brief Reads the contents of a file into a `UtxFile` instance.
  *
  * This function reads the contents of a file specified by @p filePath and
- * stores it in the UtxFile instance pointed to by @p utx. The contents are
+ * stores it in the `UtxFile` instance pointed to by @p utx. The contents are
  * read as a null-terminated string, which is stored in the `contents` member
- * of the UtxFile instance. If an error occurs during reading, the function
+ * of the `UtxFile` instance. If an error occurs during reading, the function
  * returns an error code and logs an error message to the system log.
  *
- * @param[in] utx The UTX buffer where the file contents will be stored.
+ * @param[in] utx Pointer to `UtxFile` instance where the file contents will be stored.
  * @param[in] filePath The path to the file whose contents should be read.
  *
- * @return ROkay if the operation was successful, or an error code otherwise.
+ * @return `ROkay` if the operation was successful, or an error code otherwise.
+ *
  * -------------------------------------------------------------------------- */
 Result utxRead(UtxFile* utx, const char_t *filePath) {
     if (utx == NULL) {
@@ -310,17 +318,18 @@ Result utxRead(UtxFile* utx, const char_t *filePath) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Writes the contents of a UtxFile instance to a file.
+ * @brief Writes the contents of a `UtxFile` instance to a file.
  *
- * This function writes the contents of the given UtxFile instance to the
+ * This function writes the contents of the given `UtxFile` instance to the
  * specified file. If an error occurs during writing, the function returns
  * an error code and logs an error message.
  *
- * @param[in] utx A pointer to the UtxFile instance containing the contents to
+ * @param[in] utx A pointer to the `UtxFile` instance containing the contents to
  * write.
  * @param[in] filePath The path to the file where the contents should be written.
  *
- * @return ROkay if the operation was successful, or an error code otherwise.
+ * @return `ROkay` if the operation was successful, or an error code otherwise.
+ *
  * -------------------------------------------------------------------------- */
 Result utxWriteContentsToFile(UtxFile* utx, const char_t *filePath) {
     if (utx == NULL) {
@@ -346,20 +355,20 @@ Result utxWriteContentsToFile(UtxFile* utx, const char_t *filePath) {
 }
 
 /** ----------------------------------------------------------------------------
- * @brief Writes the contents of a UtxFile instance to a file.
+ * @brief Writes the contents of a `UtxFile` instance to a file.
  *
- * This function writes the contents of the given UtxFile instance to the
+ * This function writes the contents of the given `UtxFile` instance to the
  * specified file. If an error occurs during writing, the function returns
  * an error code and logs an error message. If no file folder is specified,
- * the working directory is used instead. The isModified flag is reset
- * to FALSE after the contents are written.
+ * the working directory is used instead. The `isModified` flag is reset
+ * to `FALSE` after the contents are written.
  *
- * @param[in] utx A pointer to the UtxFile instance containing the contents
- * to write.
+ * @param[in] utx Pointer to `UtxFile` instance containing the contents to write.
  * @param[in] fileFolder The path to the directory where the file should be
- * written. If NULL, the working directory is used instead.
+ * written. If `NULL`, the working directory is used instead.
  *
- * @return ROkay if the operation was successful, or an error code otherwise.
+ * @return `ROkay` if the operation was successful, or an error code otherwise.
+ *
  * -------------------------------------------------------------------------- */
 Result utxWrite(UtxFile* utx, const char_t *fileFolder) {
     if (utx == NULL) {
