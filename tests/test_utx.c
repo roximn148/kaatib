@@ -16,7 +16,7 @@
 #include <core/hfile.h>
 #include <sewer/bmath.h>
 
-#include "unity.h"
+#include <unity.h>
 #include "utx.h"
 
 /*----------------------------------------------------------------------------*/
@@ -60,7 +60,7 @@ void test_utxCreate_New(void) {
     TEST_ASSERT_NOT_NULL(utx->contents);
     TEST_ASSERT_TRUE(str_empty(utx->contents));
     TEST_ASSERT_NULL(utx->fileFolder);
-    TEST_ASSERT_FALSE(utx->isModified);
+    TEST_ASSERT_TRUE(utx->isModified);
 
     utxDestroy(&utx);
 }
@@ -101,7 +101,7 @@ void test_utxCreateFrom_String(void) {
     TEST_ASSERT_NOT_NULL(utx->fileName);
     TEST_ASSERT_FALSE(str_empty(utx->fileName));
     TEST_ASSERT_NULL(utx->fileFolder);
-    TEST_ASSERT_FALSE(utx->isModified);
+    TEST_ASSERT_TRUE(utx->isModified);
 
     str_destroy(&testString);
     utxDestroy(&utx);
@@ -136,11 +136,13 @@ void test_utxSetContents_NewString(void) {
     TEST_ASSERT_FALSE(str_empty(utx->contents));
     TEST_ASSERT_EQUAL(0, str_scmp(utx->contents, testString5));
     TEST_ASSERT_NOT_EQUAL(0, str_scmp(utx->contents, testString10));
+    TEST_ASSERT_TRUE(utx->isModified);
 
     utxSetContents(utx, testString10);
     TEST_ASSERT_FALSE(str_empty(utx->contents));
     TEST_ASSERT_EQUAL(0, str_scmp(utx->contents, testString10));
     TEST_ASSERT_NOT_EQUAL(0, str_scmp(utx->contents, testString5));
+    TEST_ASSERT_TRUE(utx->isModified);
 
     str_destroy(&testString5);
     str_destroy(&testString10);
