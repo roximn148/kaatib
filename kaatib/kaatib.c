@@ -31,6 +31,52 @@ static void onWindowClose(App *app, Event *e) {
 }
 
 /* -------------------------------------------------------------------------- */
+static String* conv2ArabicNumber(uint32_t number) {
+    String *asciiNumber = str_printf("%d", number);
+    uint32_t count = str_len(asciiNumber);
+
+    String *arabicNumber = str_fill(count*2, '\x20');
+
+    const char_t *digit = tc(asciiNumber);
+    char_t *arDigit = tcc(arabicNumber);
+    for (uint32_t i = 0; i < count; ++i) {
+        if (*digit >= '0' && *digit <= '9') {
+            /* Convert ASCII digit to Unicode Arabic numeral */
+            arDigit[0] = '\xd9';
+            arDigit[1] = *digit - '0' + '\xa0';
+        } else {
+            arDigit[0] = arDigit[1] = '\x20';
+        }
+        digit++; arDigit += 2;
+    }
+    str_destroy(&asciiNumber);
+    return arabicNumber;
+}
+
+/* -------------------------------------------------------------------------- */
+static String* conv2IndicArabicNumber(uint32_t number) {
+    String *asciiNumber = str_printf("%d", number);
+    uint32_t count = str_len(asciiNumber);
+
+    String *arabicNumber = str_fill(count*2, '\x20');
+
+    const char_t *digit = tc(asciiNumber);
+    char_t *arDigit = tcc(arabicNumber);
+    for (uint32_t i = 0; i < count; ++i) {
+        if (*digit >= '0' && *digit <= '9') {
+            /* Convert ASCII digit to Unicode Arabic numeral */
+            arDigit[0] = '\xdb';
+            arDigit[1] = *digit - '0' + '\xb0';
+        } else {
+            arDigit[0] = arDigit[1] = '\x20';
+        }
+        digit++; arDigit += 2;
+    }
+    str_destroy(&asciiNumber);
+    return arabicNumber;
+}
+
+/* -------------------------------------------------------------------------- */
 static void onDrawView(App *app, Event *e) {
     unref(app);
     const color_t CPaperYellow = color_hsbf(0.167f, 0.05f, 1.0f);
@@ -48,7 +94,7 @@ static void onDrawView(App *app, Event *e) {
     draw_matrixf(ctx, &t2d);
 
     draw_clear(ctx, CPaperYellow);
-    draw_antialias(ctx, FALSE);
+    draw_antialias(ctx, TRUE);
 
     draw_line_width(ctx, 1);
     draw_line_color(ctx, CGrey);
@@ -60,16 +106,16 @@ static void onDrawView(App *app, Event *e) {
     }
 
     draw_matrixf(ctx, kT2D_IDENTf);
-    draw_text_align(p->ctx, ekRIGHT, ekBOTTOM);
+    draw_text_align(ctx, ekRIGHT, ekBOTTOM);
     lineY = CTopMargin;
     uint32_t lineNum = 1;
     while (lineY < h - CBottomMargin - 1) {
-        String *s = str_printf("%d", lineNum);
+        String *arLineNum = conv2IndicArabicNumber(lineNum);
         real32_t tw, th;
-        draw_text_extents(p->ctx,tc(s), 0, &tw, &th);
-        draw_text_color(p->ctx, kCOLOR_BLACK);
-        draw_text(p->ctx, tc(s), w - (CLeadingMargin / 2.f) + (tw / 2.f), lineY);
-        str_destroy(&s);
+        draw_text_extents(ctx, tc(arLineNum), 0, &tw, &th);
+        draw_text_color(ctx, kCOLOR_BLACK);
+        draw_text(ctx, tc(arLineNum), w - (CLeadingMargin / 2.f) + (tw / 2.f), lineY);
+        str_destroy(&arLineNum);
 
         lineY += CLineSpacing;
         lineNum += 1;
@@ -103,7 +149,7 @@ static Panel *createCentralPanel(App *app) {
     /* Widgets ****************************************************************/
     TextView *text = textview_create();
     textview_family(text, "Calibri");
-    textview_fsize(text, 24);
+    textview_fsize(text, 32);
     textview_halign(text, ekRIGHT);
     textview_lspacing(text, 1.2);
     textview_editable(text, !app->isReadOnly);
