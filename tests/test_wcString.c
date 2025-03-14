@@ -100,7 +100,7 @@ void test_wcSringNew_Abjad(void) {
 
 /*----------------------------------------------------------------------------*/
 void test_wcSringNew_ULimit(void) {
-    char_t *ulimit = "\xef\xbf\xbf";
+    char_t *ulimit = "\xef\xbf\xbd";
     uint32_t charCount = blib_strlen(ulimit);
     uint32_t uniCharCount = unicode_nchars(ulimit, ekUTF8);
     TEST_ASSERT_EQUAL_UINT32(3, charCount);
@@ -114,7 +114,7 @@ void test_wcSringNew_ULimit(void) {
     const char16_t* s = wcc(wcs);
     TEST_ASSERT_NOT_NULL(s);
 
-    TEST_ASSERT_EQUAL_UINT16(0xFFFF, s[0]);
+    TEST_ASSERT_EQUAL_UINT16(0xFFFD, s[0]);
 
     wcStringDestroy(&wcs);
 }

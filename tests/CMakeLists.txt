@@ -18,6 +18,13 @@ ADD_EXECUTABLE(testWcString test_wcString.c)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/utx)
 TARGET_LINK_LIBRARIES(testWcString unity utx ${NAPPGUI_LIBRARIES} Ws2_32)
 
+# TEST UtxUtils
+ADD_EXECUTABLE(testUtxUtils test_utxUtils.c)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/utx)
+TARGET_LINK_LIBRARIES(testUtxUtils unity utx ${NAPPGUI_LIBRARIES} Ws2_32)
+
+FIND_PACKAGE(Freetype)
+FIND_PACKAGE(harfbuzz)
 
 # TEST Kaata
 ADD_EXECUTABLE(testKaata test_kaata.c)
@@ -41,3 +48,4 @@ TARGET_LINK_LIBRARIES(testKaata
 ADD_TEST(testUtx testUtx)
 ADD_TEST(testKaata testKaata)
 add_test(testWcString testWcString)
+add_test(testUtxUtils testUtxUtils)
