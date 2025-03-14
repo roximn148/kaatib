@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Copyright (c) 2024. All rights reserved.
 *
-* This work is licensed under the Creative Commons Attribution 4.0 
+* This work is licensed under the Creative Commons Attribution 4.0
 * International License. To view a copy of this license,
 * visit # http://creativecommons.org/licenses/by/4.0/.
 *
@@ -14,6 +14,7 @@
  * @brief Kaatib application GUI window.
  * -------------------------------------------------------------------------- */
 #include "kaatib.h"
+#include "utils.h"
 
 /* -------------------------------------------------------------------------- */
 static const real32_t CLeadingMargin = 100.f;
@@ -28,52 +29,6 @@ static void onWindowClose(App *app, Event *e) {
     unref(e);
     log_printf("Closing main window");
     osapp_finish();
-}
-
-/* -------------------------------------------------------------------------- */
-static String* conv2ArabicNumber(uint32_t number) {
-    String *asciiNumber = str_printf("%d", number);
-    uint32_t count = str_len(asciiNumber);
-
-    String *arabicNumber = str_fill(count*2, '\x20');
-
-    const char_t *digit = tc(asciiNumber);
-    char_t *arDigit = tcc(arabicNumber);
-    for (uint32_t i = 0; i < count; ++i) {
-        if (*digit >= '0' && *digit <= '9') {
-            /* Convert ASCII digit to Unicode Arabic numeral */
-            arDigit[0] = '\xd9';
-            arDigit[1] = *digit - '0' + '\xa0';
-        } else {
-            arDigit[0] = arDigit[1] = '\x20';
-        }
-        digit++; arDigit += 2;
-    }
-    str_destroy(&asciiNumber);
-    return arabicNumber;
-}
-
-/* -------------------------------------------------------------------------- */
-static String* conv2IndicArabicNumber(uint32_t number) {
-    String *asciiNumber = str_printf("%d", number);
-    uint32_t count = str_len(asciiNumber);
-
-    String *arabicNumber = str_fill(count*2, '\x20');
-
-    const char_t *digit = tc(asciiNumber);
-    char_t *arDigit = tcc(arabicNumber);
-    for (uint32_t i = 0; i < count; ++i) {
-        if (*digit >= '0' && *digit <= '9') {
-            /* Convert ASCII digit to Unicode Arabic numeral */
-            arDigit[0] = '\xdb';
-            arDigit[1] = *digit - '0' + '\xb0';
-        } else {
-            arDigit[0] = arDigit[1] = '\x20';
-        }
-        digit++; arDigit += 2;
-    }
-    str_destroy(&asciiNumber);
-    return arabicNumber;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -110,7 +65,7 @@ static void onDrawView(App *app, Event *e) {
     lineY = CTopMargin;
     uint32_t lineNum = 1;
     while (lineY < h - CBottomMargin - 1) {
-        String *arLineNum = conv2IndicArabicNumber(lineNum);
+        String *arLineNum = number2IndicNumeral(lineNum);
         real32_t tw, th;
         draw_text_extents(ctx, tc(arLineNum), 0, &tw, &th);
         draw_text_color(ctx, kCOLOR_BLACK);
@@ -161,12 +116,12 @@ static Panel *createCentralPanel(App *app) {
     view_OnDraw(utv, listener(app, onDrawView, App));
     view_OnOverlay(utv, listener(app, onDrawOverlay, App));
     app->ui.utv = utv;
-    
+
     /* Layout *****************************************************************/
     Layout *layout = layout_create(1, 2);
     layout_margin(layout, 2);
     panel_layout(panel, layout);
-    
+
     uint32_t row = 0;
     layout_textview(layout, text, 0, row);
     /* layout_hsize(layout, 0, 1);
@@ -176,8 +131,8 @@ static Panel *createCentralPanel(App *app) {
     row += 1;
     layout_view(layout, utv, 0, row);
     layout_hsize(layout, 0, 800);
-    layout_vsize(layout, row, 200); 
-    layout_vexpand(layout, row); 
+    layout_vsize(layout, row, 200);
+    layout_vexpand(layout, row);
 
     return panel;
 }
