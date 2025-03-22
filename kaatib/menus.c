@@ -82,7 +82,7 @@ static MenuItem *createFileMenu(App *app) {
         menuitem_image(miNew, (const Image*)FILE_NEW_PNG);
         menuitem_key(miNew, ekKEY_N, ekMKEY_CONTROL);
         menuitem_OnClick(miNew, listener(app, onFileNew, App));
-        menu_item(mnuFile, miNew);
+        menu_add_item(mnuFile, miNew);
         app->ui.miNew = miNew;
 
         MenuItem *miOpen = menuitem_create();
@@ -90,7 +90,7 @@ static MenuItem *createFileMenu(App *app) {
         menuitem_image(miOpen, (const Image*)FILE_OPEN_PNG);
         menuitem_key(miOpen, ekKEY_O, ekMKEY_CONTROL);
         menuitem_OnClick(miOpen, listener(app, onFileOpen, App));
-        menu_item(mnuFile, miOpen);
+        menu_add_item(mnuFile, miOpen);
         app->ui.miOpen = miOpen;
 
         MenuItem *miSave = menuitem_create();
@@ -98,7 +98,7 @@ static MenuItem *createFileMenu(App *app) {
         menuitem_image(miSave, (const Image*)SAVE_PNG);
         menuitem_key(miSave, ekKEY_S, ekMKEY_CONTROL);
         menuitem_OnClick(miSave, listener(app, onFileSave, App));
-        menu_item(mnuFile, miSave);
+        menu_add_item(mnuFile, miSave);
         app->ui.miSave = miSave;
 
         MenuItem *miRevert = menuitem_create();
@@ -106,28 +106,28 @@ static MenuItem *createFileMenu(App *app) {
         menuitem_image(miRevert, (const Image*)REVERT_PNG);
         menuitem_key(miRevert, ekKEY_R, ekMKEY_CONTROL+ekMKEY_SHIFT);
         menuitem_OnClick(miRevert, listener(app, onFileRevert, App));
-        menu_item(mnuFile, miRevert);
+        menu_add_item(mnuFile, miRevert);
         app->ui.miRevert = miRevert;
 
-        menu_item(mnuFile, menuitem_separator());
+        menu_add_item(mnuFile, menuitem_separator());
 
         MenuItem *miRecent = menuitem_create();
         menuitem_text(miRecent, "&Recent");
         menuitem_image(miRecent, (const Image*)RECENT_PNG);
         menuitem_key(miRecent, ekKEY_R, ekMKEY_CONTROL+ekMKEY_SHIFT);
-        menu_item(mnuFile, miRecent);
+        menu_add_item(mnuFile, miRecent);
         app->ui.miRecent = miRecent;
         
         #if !defined(__APPLE__)
         {
-            menu_item(mnuFile, menuitem_separator());
+            menu_add_item(mnuFile, menuitem_separator());
 
             MenuItem *miExit = menuitem_create();
             menuitem_text(miExit, "&Exit");
             menuitem_image(miExit, (const Image*)EXIT_PNG);
             menuitem_key(miExit, ekKEY_F4, ekMKEY_CONTROL);
             menuitem_OnClick(miExit, listener(app, onFileClose, App));
-            menu_item(mnuFile, miExit);
+            menu_add_item(mnuFile, miExit);
         }
         #endif
        
@@ -204,7 +204,7 @@ static MenuItem *createEditMenu(App *app) {
         menuitem_image(miUndo, (const Image*)UNDO_PNG);
         menuitem_key(miUndo, ekKEY_Z, ekMKEY_CONTROL);
         menuitem_OnClick(miUndo, listener(app, onEditUndo, App));
-        menu_item(mnuEdit, miUndo);
+        menu_add_item(mnuEdit, miUndo);
         app->ui.miUndo = miUndo;
 
         MenuItem *miRedo = menuitem_create();
@@ -212,17 +212,17 @@ static MenuItem *createEditMenu(App *app) {
         menuitem_image(miRedo, (const Image*)REDO_PNG);
         menuitem_key(miRedo, ekKEY_Z, ekMKEY_CONTROL+ekMKEY_SHIFT);
         menuitem_OnClick(miRedo, listener(app, onEditRedo, App));
-        menu_item(mnuEdit, miRedo);
+        menu_add_item(mnuEdit, miRedo);
         app->ui.miRedo = miRedo;
 
-        menu_item(mnuEdit, menuitem_separator());
+        menu_add_item(mnuEdit, menuitem_separator());
 
         MenuItem *miCopy = menuitem_create();
         menuitem_text(miCopy, "&Copy");
         menuitem_image(miCopy, (const Image*)COPY_PNG);
         menuitem_key(miCopy, ekKEY_C, ekMKEY_CONTROL);
         menuitem_OnClick(miCopy, listener(app, onEditCopy, App));
-        menu_item(mnuEdit, miCopy);
+        menu_add_item(mnuEdit, miCopy);
         app->ui.miCopy = miCopy;
 
         MenuItem *miCut = menuitem_create();
@@ -230,7 +230,7 @@ static MenuItem *createEditMenu(App *app) {
         menuitem_image(miCut, (const Image*)CUT_PNG);
         menuitem_key(miCut, ekKEY_X, ekMKEY_CONTROL);
         menuitem_OnClick(miCut, listener(app, onEditCut, App));
-        menu_item(mnuEdit, miCut);
+        menu_add_item(mnuEdit, miCut);
         app->ui.miCut = miCut;
 
         MenuItem *miPaste = menuitem_create();
@@ -238,17 +238,17 @@ static MenuItem *createEditMenu(App *app) {
         menuitem_image(miPaste, (const Image*)PASTE_PNG);
         menuitem_key(miPaste, ekKEY_V, ekMKEY_CONTROL);
         menuitem_OnClick(miPaste, listener(app, onEditPaste, App));
-        menu_item(mnuEdit, miPaste);
+        menu_add_item(mnuEdit, miPaste);
         app->ui.miPaste = miPaste;
 
-        menu_item(mnuEdit, menuitem_separator());
+        menu_add_item(mnuEdit, menuitem_separator());
 
         MenuItem *miSelectAll = menuitem_create();
         menuitem_text(miSelectAll, "&Select All");
         menuitem_image(miSelectAll, (const Image*)COPY_ALL_PNG);
         menuitem_key(miSelectAll, ekKEY_A, ekMKEY_CONTROL);
         menuitem_OnClick(miSelectAll, listener(app, onEditSelectAll, App));
-        menu_item(mnuEdit, miSelectAll);
+        menu_add_item(mnuEdit, miSelectAll);
         app->ui.miSelectAll = miSelectAll;
 
         MenuItem *miReadOnly = menuitem_create();
@@ -257,7 +257,7 @@ static MenuItem *createEditMenu(App *app) {
         menuitem_key(miReadOnly, ekKEY_R, ekMKEY_CONTROL+ekMKEY_SHIFT);
         menuitem_state(miReadOnly, app->isReadOnly ? ekGUI_ON : ekGUI_OFF);
         menuitem_OnClick(miReadOnly, listener(app, onEditToggleReadOnly, App));
-        menu_item(mnuEdit, miReadOnly);
+        menu_add_item(mnuEdit, miReadOnly);
         app->ui.miReadOnly = miReadOnly;
 
         menuitem_submenu(miEdit, &mnuEdit);
@@ -293,7 +293,7 @@ static MenuItem *createViewMenu(App *app) {
     menuitem_image(miWhitespace, (const Image*)WHITESPACE_PNG);
     menuitem_key(miWhitespace, ekKEY_F3, ekMKEY_NONE);
     menuitem_OnClick(miWhitespace, listener(app, onViewWhitespace, App));
-    menu_item(mnuView, miWhitespace);
+    menu_add_item(mnuView, miWhitespace);
     app->ui.miWhitespace = miWhitespace;
 
     MenuItem *miKeyboard = menuitem_create();
@@ -301,7 +301,7 @@ static MenuItem *createViewMenu(App *app) {
     menuitem_image(miKeyboard, (const Image*)KEYBOARD_PNG);
     menuitem_key(miKeyboard, ekKEY_F8, ekMKEY_NONE);
     menuitem_OnClick(miKeyboard, listener(app, onViewKeyboard, App));
-    menu_item(mnuView, miKeyboard);
+    menu_add_item(mnuView, miKeyboard);
     app->ui.miKeyboard = miKeyboard;
 
     menuitem_submenu(miView, &mnuView);
@@ -330,7 +330,7 @@ static MenuItem *createHelpMenu(App *app) {
     menuitem_image(miAbout, (const Image*)INFO_PNG);
     menuitem_key(miAbout, ekKEY_F1, ekMKEY_NONE);
     menuitem_OnClick(miAbout, listener(app, onHelpAbout, App));
-    menu_item(mnuHelp, miAbout);
+    menu_add_item(mnuHelp, miAbout);
     app->ui.miAbout = miAbout;
 
     menuitem_submenu(miHelp, &mnuHelp);
@@ -342,10 +342,10 @@ static MenuItem *createHelpMenu(App *app) {
 void createKaatibMenubar(App *app) {
     Menu *menu = menu_create();
 
-    menu_item(menu, createFileMenu(app));
-    menu_item(menu, createEditMenu(app));
-    menu_item(menu, createViewMenu(app));
-    menu_item(menu, createHelpMenu(app));
+    menu_add_item(menu, createFileMenu(app));
+    menu_add_item(menu, createEditMenu(app));
+    menu_add_item(menu, createViewMenu(app));
+    menu_add_item(menu, createHelpMenu(app));
 
     app->ui.menu = menu;
 }
