@@ -30,6 +30,7 @@ NAP_CONFIG_COMPILER()
 # Kaatib project
 NAP_PROJECT_LIBRARY(utx utx)
 NAP_PROJECT_DESKTOP_APP(kaatib kaatib)
+NAP_PROJECT_DESKTOP_APP(chasmekhat chasmekhat)
 
 # Testing
 include(CTest)
