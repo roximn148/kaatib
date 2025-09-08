@@ -38,7 +38,6 @@ struct _app_t {
     Layout *lyControls;
     Layout *lyInfo;
     char_t temptxt[256];
-    Font *fullfont;
     color_t drawcolor;
     color_t backcolor;
 };
@@ -483,8 +482,6 @@ static App *createApp(void) {
     app->selectedCellY = app->rowIdx;
     app->drawcolor = gui_alt_color(color_rgb(80, 80, 240), color_rgb(240, 240, 80));
     app->backcolor = gui_alt_color(color_rgb(200, 240, 200), color_rgb(80, 128, 80));
-    app->fullfont = font_system(40, 0);
-    log_printf("Using font %s\n", font_family(app->fullfont));
     
     app->window = window_create(ekWINDOW_STDRES);
     window_title(app->window, "Chasm-e-Khat");
@@ -511,7 +508,6 @@ static App *createApp(void) {
 static void destroyApp(App **app) {
     menu_destroy(&(*app)->menu);
     window_destroy(&(*app)->window);
-    font_destroy(&(*app)->fullfont);
     heap_delete(app, App);
 }
 
