@@ -1,0 +1,33 @@
+## UI layout
+- app->panel = createCentralPanel
+    - layout1 = createMultiLayout
+        - layout1 = layout_create(1, 3)
+        - layout2 = createControlLayout
+            - layout = layout_create(10, 1)
+            - layout(0,0) = lblGoto
+            - layout(1,0) = ebxGlyphId
+            - layout(2,0) = lblGlyphSize
+            - layout(3,0) = slider
+            - app->edit1 = ebxGlyphId
+            - app->control_layout = layout
+            - <- layout
+        - layout3 = createMiddleLayout
+            - layout1 = layout_create(3, 1)
+            - layout3 = createTableLayout
+            - layout(0,0) = layout2
+            - layout(1,0) = view
+            - layout(2,0) = layout3
+            - app->view = view
+            - app->middle_layout = layout1
+            - <- layout1
+        - layout4 = createInfoLayout
+            - layout = layout_create(4, 1)
+            - layout(3,0) = label2
+            - app->cells_label = label2
+            - app->info_layout = layout
+            - <- layout
+        - layout1(0, 0:2) = layout2, layout3, layout4
+        - <- layout1
+    - panel_layout(layout1)
+    - app->main_layout = layout1
+    - <- panel
