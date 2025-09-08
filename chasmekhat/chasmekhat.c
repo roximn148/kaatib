@@ -14,6 +14,7 @@
  * @brief Chasm-e-Khat is a font glyph viewer application.
  * -------------------------------------------------------------------------- */
 #include <nappgui.h>
+#include "icons.h"
 
 /*----------------------------------------------------------------------------*/
 typedef struct _app_t App;
@@ -40,11 +41,17 @@ struct _app_t {
     char_t temptxt[256];
     color_t drawcolor;
     color_t backcolor;
+    struct _ui_t {
+        MenuItem *miOpen;
+        MenuItem *miRecent;
+        MenuItem *miExit;
+        MenuItem *miAbout;
+    } ui;
 };
 
-static const uint32_t NUM_COLS = 32;
-static const uint32_t NUM_ROWS = 1024;
-static const real32_t CELL_SIZE = 50;
+static const uint32_t NUM_COLS = 5;
+static const uint32_t NUM_ROWS = 5;
+static const real32_t CELL_SIZE = 100;
 static const char_t *CELLS_INFO = "Draw cells: [%d, %d] x [%d, %d]";
 
 /** ----------------------------------------------------------------------------
@@ -453,18 +460,100 @@ static void onCloseWEvent(App *app, Event *e) {
     unref(e);
 }
 
-/*----------------------------------------------------------------------------*/
-static Menu *createMenubar(void) {
-    Menu *menu = menu_create();
-    MenuItem *item;
-    
-    item = menuitem_create();
-    menuitem_text(item, "File");
-    menu_add_item(menu, item);
+/* -------------------------------------------------------------------------- */
+static void onFileOpen(App *app, Event *e) {
+    unref(e);
 
-    item = menuitem_create();
-    menuitem_text(item, "Help");
-    menu_add_item(menu, item);
+    String *homeDir = hfile_home_dir("");
+    log_printf("Opening folder: (%s)", tc(homeDir));
+    const char_t *ftypes[] = {"txt", "*"};
+    const char_t *filePath = comwin_open_file(
+        app->window,
+        ftypes, 2,
+        tc(homeDir));
+    if (filePath != NULL) {
+        log_printf("Selected File: (%s)", filePath);
+    } else {
+        log_printf("No file selected");
+    }
+    str_destroy(&homeDir);
+}
+
+/* -------------------------------------------------------------------------- */
+static void onFileExit(App *app, Event *e) {
+    unref(app);
+    unref(e);
+    log_printf("onFileExit clicked");
+    osapp_finish();
+}
+
+/* -------------------------------------------------------------------------- */
+static void onHelpAbout(App *app, Event *e) {
+    unref(app);
+    unref(e);
+    log_printf("onHelpAbout clicked");
+}
+
+/*----------------------------------------------------------------------------*/
+static Menu *createMenubar(App *app) {
+    Menu *menu = menu_create();
+    
+    MenuItem *miFile = menuitem_create();
+    menuitem_text(miFile, "&File");
+
+    Menu *mnuFile = menu_create();
+
+        MenuItem *miOpen = menuitem_create();
+        menuitem_text(miOpen, "&Open");
+        menuitem_image(miOpen, (const Image*)FILE_OPEN_PNG);
+        menuitem_key(miOpen, ekKEY_O, ekMKEY_CONTROL);
+        menuitem_OnClick(miOpen, listener(app, onFileOpen, App));
+        menu_add_item(mnuFile, miOpen);
+        app->ui.miOpen = miOpen;
+
+        menu_add_item(mnuFile, menuitem_separator());
+
+        MenuItem *miRecent = menuitem_create();
+        menuitem_text(miRecent, "&Recent");
+        menuitem_image(miRecent, (const Image*)RECENT_PNG);
+        menuitem_key(miRecent, ekKEY_R, ekMKEY_CONTROL+ekMKEY_SHIFT);
+        menu_add_item(mnuFile, miRecent);
+        app->ui.miRecent = miRecent;
+
+        #if !defined(__APPLE__)
+        {
+            menu_add_item(mnuFile, menuitem_separator());
+
+            MenuItem *miExit = menuitem_create();
+            menuitem_text(miExit, "&Exit");
+            menuitem_image(miExit, (const Image*)EXIT_PNG);
+            menuitem_key(miExit, ekKEY_F4, ekMKEY_CONTROL);
+            menuitem_OnClick(miExit, listener(app, onFileExit, App));
+            menu_add_item(mnuFile, miExit);
+            app->ui.miExit = miExit;
+        }
+        #endif
+
+        menuitem_submenu(miFile, &mnuFile);
+
+    menu_add_item(menu, miFile);
+
+    MenuItem *miHelp = menuitem_create();
+    menuitem_text(miHelp, "&Help");
+
+    Menu *mnuHelp = menu_create();
+
+        MenuItem *miAbout = menuitem_create();
+        menuitem_text(miAbout, "&About");
+        menuitem_image(miAbout, (const Image*)INFO_PNG);
+        menuitem_key(miAbout, ekKEY_F1, ekMKEY_NONE);
+        menuitem_OnClick(miAbout, listener(app, onHelpAbout, App));
+        menu_add_item(mnuHelp, miAbout);
+        app->ui.miAbout = miAbout;
+
+        menuitem_submenu(miHelp, &mnuHelp);
+
+    menu_add_item(menu, miHelp);
 
     return menu;
 }
@@ -472,6 +561,9 @@ static Menu *createMenubar(void) {
 /*----------------------------------------------------------------------------*/
 static App *createApp(void) {
     App *app = heap_new0(App);
+
+    gui_respack(icons_respack);
+    gui_language("");
 
     app->colIdx = 0;
     app->rowIdx = 0;
@@ -495,7 +587,7 @@ static App *createApp(void) {
     app->panel = panel;
     setViewContentSize(app->view, app->margin);  /* Set the view size */
     
-    app->menu = createMenubar();
+    app->menu = createMenubar(app);
     osapp_menubar(app->menu, app->window);
 
     window_show(app->window);
@@ -520,6 +612,6 @@ static void updateApp(App *app, const real64_t prtime, const real64_t ctime) {
 
 /*----------------------------------------------------------------------------*/
 #include <osapp/osmain.h>
-osmain_sync(0.1, createApp, destroyApp, updateApp, "", App)
+osmain_sync(0.1, createApp, destroyApp, updateApp, "", App);
 
 /*----------------------------------------------------------------------------*/
