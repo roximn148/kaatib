@@ -489,9 +489,48 @@ static void onFileExit(App *app, Event *e) {
 
 /* -------------------------------------------------------------------------- */
 static void onHelpAbout(App *app, Event *e) {
+
+    uint32_t flags = ekWINDOW_TITLE | ekWINDOW_CLOSE | ekWINDOW_RETURN | ekWINDOW_ESC;
+    Window *aboutDialog = window_create(flags);
+    window_title(aboutDialog, "About Chasm-e-Khat");
+    
+      Panel *panel = panel_create();
+        Layout *layout = layout_create(2, 1);
+        layout_margin(layout, 20);
+        layout_hmargin(layout, 0, 10);
+
+          ImageView *img = imageview_create();
+          imageview_image(img, (const Image*)ABOUT_PNG);
+          imageview_scale(img, ekGUI_SCALE_ASPECTDW);
+          layout_imageview(layout, img, 0, 0);
+          layout_hsize(layout, 0, 48);
+
+          Label *lbl = label_create();
+          label_multiline(lbl, TRUE);
+          label_text(lbl, "Chasm-e-Khat\nVersion: 0.1.0 alpha\n(c) 2025 RoXimn");
+          label_align(lbl, ekLEFT);
+          layout_label(layout, lbl, 1, 0);
+          layout_hexpand(layout, 1);
+    
+        panel_layout(panel, layout);
+    window_panel(aboutDialog, panel);
+
+    V2Df pos = window_get_origin(app->window);
+    S2Df s1 = window_get_size(app->window);
+    S2Df s2 = window_get_size(aboutDialog);
+    window_origin(
+        aboutDialog,
+        v2df(pos.x + (s1.width - s2.width) / 2,
+             pos.y + (s1.height - s2.height) / 2)
+    );
+
+    uint32_t retval = UINT32_MAX;
+    retval = window_modal(aboutDialog, app->window);
+
+    window_destroy(&aboutDialog);
+
     unref(app);
     unref(e);
-    log_printf("onHelpAbout clicked");
 }
 
 /*----------------------------------------------------------------------------*/
