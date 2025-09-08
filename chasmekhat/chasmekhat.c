@@ -500,10 +500,10 @@ static void onHelpAbout(App *app, Event *e) {
         layout_hmargin(layout, 0, 10);
 
           ImageView *img = imageview_create();
-          imageview_image(img, (const Image*)ABOUT_PNG);
+          imageview_image(img, (const Image*)CHASMEKHAT64_PNG);
           imageview_scale(img, ekGUI_SCALE_ASPECTDW);
           layout_imageview(layout, img, 0, 0);
-          layout_hsize(layout, 0, 48);
+          layout_hsize(layout, 0, 64);
 
           Label *lbl = label_create();
           label_multiline(lbl, TRUE);
