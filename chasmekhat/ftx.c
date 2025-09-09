@@ -15,6 +15,7 @@
  * -------------------------------------------------------------------------- */
 #include "ftx.h"
 
+#include <draw2d/pixbuf.h>
 
  /** ---------------------------------------------------------------------------
  * @brief Initialize the font engine.
@@ -106,7 +107,7 @@ int closeFontFace(FontEngine *fe) {
  * FreeType.
  *
  * @param fe Pointer to the FontEngine structure.
- * @param glyphId The indexof the glyph in the font to be rendered.
+ * @param glyphId The index of the glyph in the font to be rendered.
  * @return int Returns 0 on success, -1 on failure.
  * -------------------------------------------------------------------------- */
 int renderGlyph(FontEngine *fe, unsigned int glyphId) {
@@ -122,6 +123,56 @@ int renderGlyph(FontEngine *fe, unsigned int glyphId) {
       return -1; /* Error rendering glyph */;
 
     return 0; /* Success */
+}
+
+/** ----------------------------------------------------------------------------
+ * @brief Converts an FT_Bitmap GRAY8 to RGBA32 Image.
+ *
+ * This function takes an FT_Bitmap structure and converts it into a Image
+ * containing the glyph data in RGBA32 format. The function assumes that the
+ * input FT_Bitmap is in GRAY8 format. The color of the glyph can be
+ * specified. The alpha channel of the resulting Image is populated from
+ * the bitmap's pixel values, while the RGB channels of all the pixels in
+ * the resulting Image are set to the specified glyph color. The caller
+ * is responsible for  destroying the returned Image.
+ *
+ * @param gBmp A pointer to the FT_Bitmap representing the glyph bitmap.
+ * @param glyphColor The color of the glyph in RGBA format.
+ * @return A new Image containing the glyph data, or NULL if the input is invalid.
+ *         The caller is responsible for destroying the returned Image.
+ * -------------------------------------------------------------------------- */
+Image* ftBmp2ImageRGBA(const FT_Bitmap *ftBitmap, const color_t glyphColor) {
+    if (ftBitmap == NULL || ftBitmap->buffer == NULL) {
+        return NULL;
+    }
+
+    /* Create a new RGBA32 pixbuf for the destination image */
+    Pixbuf *destBuffer = pixbuf_create(ftBitmap->width, ftBitmap->rows, ekRGBA32);
+    uint8_t *rgbaMap = pixbuf_data(destBuffer);
+
+    uint8_t r, g, b;
+    color_get_rgb(glyphColor, &r, &g, &b);
+
+    /* Iterate over each row */
+    byte_t *line = (uint8_t *)ftBitmap->buffer;
+    for (uint32_t row = 0; row < ftBitmap->rows; row++) {
+        /* Iterate over each pixel in the row */
+        for (uint32_t j = 0; j < ftBitmap->width; j++) {
+            rgbaMap[0] = r;
+            rgbaMap[1] = g;
+            rgbaMap[2] = b;
+            /* Copy source pixel value to destination alpha channel.
+            Assumes source GRAY8 format. */
+            rgbaMap[3] = line[j];
+
+            rgbaMap += 4; /* Next pixel in RGBA map */
+        }
+        line += ftBitmap->pitch; /* Next row in glyph bitmap buffer skipping any padding */
+    }
+
+    Image *img = image_from_pixbuf(destBuffer, NULL);
+    pixbuf_destroy(&destBuffer);
+    return img;
 }
 
 /*----------------------------------------------------------------------------*/

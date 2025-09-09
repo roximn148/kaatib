@@ -14,7 +14,6 @@
  * @brief Chasm-e-Khat is a font glyph viewer application.
  * -------------------------------------------------------------------------- */
 #include <nappgui.h>
-#include <draw2d/pixbuf.h>
 
 #include "ftx.h"
 #include "icons.h"
@@ -45,7 +44,7 @@ struct _app_t {
     char_t temptxt[256];
     color_t drawcolor;
     color_t backcolor;
-    struct _ui_t {
+    struct {
         MenuItem *miOpen;
         MenuItem *miRecent;
         MenuItem *miExit;
@@ -67,7 +66,7 @@ static const char_t *CELLS_INFO = "Draw cells: [%d, %d] x [%d, %d]";
  * @param view The view to set the content size for.
  * @param margin The margin around the cells.
  *
- * Global constants:
+ * Global constants used,
  * - NUM_COLS: The number of columns in the grid.
  * - NUM_ROWS: The number of rows in the grid.
  * - CELL_SIZE: The size of each cell in the grid.
@@ -83,7 +82,7 @@ static void setViewContentSize(View *view, uint32_t margin) {
 }
 
 /** ----------------------------------------------------------------------------
- * Scrolls the view to the specified cell.
+ * @brief Scrolls the view to the specified cell.
  *
  * @param view The view containing the cells.
  * @param col The column index of the target cell.
@@ -487,7 +486,6 @@ static void onFileOpen(App *app, Event *e) {
 static void onFileExit(App *app, Event *e) {
     unref(app);
     unref(e);
-    log_printf("onFileExit clicked");
     osapp_finish();
 }
 
@@ -603,106 +601,87 @@ static Menu *createMenubar(App *app) {
 
 /*----------------------------------------------------------------------------*/
 static void dumpFontGlyphs(App * app) {
-    /* Load FreeType library and log error for failure */
-    if (initFontEngine(&app->fontEngine)) {
-        log_printf("Failed to load FreeType library.");
-    } else {
-        FT_Int major, minor, patch;
-        FT_Library_Version(app->fontEngine.ftLibrary, &major, &minor, &patch);
-        log_printf("Loaded FreeType version: %d.%d.%d", major, minor, patch);
 
-        char_t cwd[] = "D:/projects/kaatib/";
-        ferror_t error;
-        bool_t success = bfile_dir_set_work(cwd, &error);
-        if (success) {
-            log_printf("CWD: %s", cwd);
-        } else {
-            log_printf("Failed to change working directory to %s [%d]", cwd, error);
+    if (app->fontEngine.ftLibrary == NULL) {
+        log_printf("FreeType library is not initialized.");
+        return;
+    }
+
+    char_t cwd[] = "D:/projects/kaatib/";
+    ferror_t error;
+    bool_t success = bfile_dir_set_work(cwd, &error);
+    if (success) {
+        log_printf("CWD: %s", cwd);
+    } else {
+        log_printf("Failed to change working directory to %s [%d]", cwd, error);
+    }
+
+    const char fontFile[] = "utx/NotoNaskhArabic-VariableFont_wght.ttf";
+    if (loadFontFace(&app->fontEngine, fontFile, 72)) {
+        log_printf("Failed to load font face %s.", fontFile);
+        return;
+    }
+    log_printf("Font face %s successfully loaded.", fontFile);
+
+    FT_Face face = app->fontEngine.face;
+    log_printf(
+        "Face Count: %d, Index: %d, Flags: %08Xh, "
+        "Style: %08Xh, Glyph Count: %0d, Family: '%s', Type: '%s', "
+        "Bitmap Count: %d, Charmap Count: %d",
+        face->num_faces,
+        face->face_index,
+        face->face_flags,
+        face->style_flags,
+        face->num_glyphs,
+        face->family_name,
+        face->style_name,
+        face->num_fixed_sizes,
+        face->num_charmaps
+    );
+
+    const color_t glyphColor = color_html("#000080");
+    uint32_t count = 10; /* face->num_glyphs */
+    for (uint32_t i  = 0; i < count; i++) {
+        if (renderGlyph(&app->fontEngine, i)) {
+            log_printf("Failed to render glyph #%d", i);
+            continue;
         }
 
-        const char fontFile[] = "utx/NotoNaskhArabic-VariableFont_wght.ttf";
-        if (loadFontFace(&app->fontEngine, fontFile, 72)) {
-            log_printf("Failed to load font face %s.", fontFile);
+        FT_Bitmap *gBmp = &face->glyph->bitmap;
+        log_printf(
+            "Glyph[%02d], %dx%d, pitch: %d, levels: %d",
+            i,
+            gBmp->width,
+            gBmp->rows,
+            gBmp->pitch,
+            gBmp->num_grays
+        );
+
+        if (gBmp->width == 0 || gBmp->rows == 0) {
+            continue;
+        }
+
+        /* Create a new image from the freetype glyph render */
+        Image *img = ftBmp2ImageRGBA(gBmp, glyphColor);
+        if (img == NULL) {
+            log_printf("Failed to create image for glyph #%d", i);
+            continue;
         } else {
-            log_printf("Font face %s successfully loaded.", fontFile);
+            log_printf("Created image for glyph #%d", i);
+            /* Save the image as a PNG file with a filename based on the glyph index */
+            // image_codec(img, ekPNG);
+            // String *fname = str_printf("glyph%02d.png", i);
+            // ferror_t err;
+            // image_to_file(img, tc(fname), &err);
+            // str_destroy(&fname);
 
-            FT_Face face = app->fontEngine.face;
-            log_printf(
-                "Face Count: %d, Index: %d, Flags: %08Xh, "
-                "Style: %08Xh, Glyph Count: %0d, Family: '%s', Type: '%s', "
-                "Bitmap Count: %d, Charmap Count: %d",
-                face->num_faces,
-                face->face_index,
-                face->face_flags,
-                face->style_flags,
-                face->num_glyphs,
-                face->family_name,
-                face->style_name,
-                face->num_fixed_sizes,
-                face->num_charmaps
-            );
-
-            uint32_t count = 10; /* face->num_glyphs */
-            for (uint32_t i  = 0; i < count; i++) {
-                if (renderGlyph(&app->fontEngine, i)) {
-                    log_printf("Failed to render glyph #%d", i);
-                    continue;
-                }
-
-                FT_Bitmap *gBmp = &face->glyph->bitmap;
-                log_printf(
-                    "Glyph[%02d], %dx%d, pitch: %d, levels: %d",
-                    i,
-                    gBmp->width,
-                    gBmp->rows,
-                    gBmp->pitch,
-                    gBmp->num_grays
-                );
-
-                if (gBmp->width == 0 || gBmp->rows == 0) {
-                    continue;
-                }
-
-                /* Create a new RGBA32 pixbuf for the destination image */
-                Pixbuf *destBuffer = pixbuf_create(gBmp->width, gBmp->rows, ekRGBA32);
-                byte_t *rgbaMap = pixbuf_data(destBuffer);
-                const byte_t glyphColor[] = {0, 0, 0xFF}; // Blue color
-
-                /* Iterate over each row */
-                byte_t *line = (byte_t *)gBmp->buffer;
-                for (uint32_t row = 0; row < gBmp->rows; row++) {
-                    /* Iterate over each pixel in the row */
-                    for (uint32_t j = 0; j < gBmp->width; j++) {
-                        rgbaMap[0] = glyphColor[0];
-                        rgbaMap[1] = glyphColor[1];
-                        rgbaMap[2] = glyphColor[2];
-                        /* Copy source pixel value to destination alpha channel.
-                        Assumes source GRAY8 format. */
-                        rgbaMap[3] = line[j];
-
-                        rgbaMap += 4; /* Next pixel in RGBA map */
-                    }
-                    line += gBmp->pitch; /* Next row in glyph bitmap buffer skipping any padding */
-                }
-
-                /* Create a new image from the destination pixbuf and destroy
-                the intermediate buffer */
-                Image *img = image_from_pixbuf(destBuffer, NULL);
-                pixbuf_destroy(&destBuffer);
-
-                /* Save the image as a PNG file with a filename based on the glyph index */
-                image_codec(img, ekPNG);
-                String *fname = str_printf("glyph%02d.png", i);
-                ferror_t err;
-                // image_to_file(img, tc(fname), &err);
-                str_destroy(&fname);
-
-                /* Destroy the image to free memory */
-                image_destroy(&img);
-            }
+            /* Destroy the image to free memory */
+            image_destroy(&img);
         }
     }
 
+    closeFontFace(&app->fontEngine);
+    log_printf("Font face %s closed.", fontFile);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -737,6 +716,17 @@ static App *createApp(void) {
     app->menu = createMenubar(app);
     osapp_menubar(app->menu, app->window);
 
+    /* Load FreeType library */
+    if (initFontEngine(&app->fontEngine)) {
+        log_printf("Failed to load FreeType library.");
+        app->fontEngine.ftLibrary = NULL;
+        app->fontEngine.face = NULL;
+    } else {
+        FT_Int major, minor, patch;
+        FT_Library_Version(app->fontEngine.ftLibrary, &major, &minor, &patch);
+        log_printf("Loaded FreeType version: %d.%d.%d", major, minor, patch);
+    }
+
     window_show(app->window);
     scrollToCell(app->view, app->colIdx, app->rowIdx, app->margin); /* Scroll to the given cell */
 
@@ -749,6 +739,10 @@ static App *createApp(void) {
 static void destroyApp(App **app) {
     menu_destroy(&(*app)->menu);
     window_destroy(&(*app)->window);
+
+    closeFontFace(&(*app)->fontEngine);
+    closeFontEngine(&(*app)->fontEngine);
+
     heap_delete(app, App);
 }
 

@@ -16,6 +16,9 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <draw2d/image.h>
+#include <draw2d/color.h>
+
 /*----------------------------------------------------------------------------*/
 #ifdef __cplusplus
     extern "C" {
@@ -36,6 +39,8 @@ int loadFontFace(FontEngine *fe, const char *fontPath, unsigned int fontSize);
 int closeFontFace(FontEngine *fe);
 
 int renderGlyph(FontEngine *fe, unsigned int glyphId);
+
+Image* ftBmp2ImageRGBA(const FT_Bitmap *ftBitmap, const color_t glyphColor);
 
 /*----------------------------------------------------------------------------*/
 #ifdef __cplusplus
