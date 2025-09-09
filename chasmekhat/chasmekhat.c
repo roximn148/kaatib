@@ -52,8 +52,8 @@ struct _app_t {
     } ui;
 };
 
-static const uint32_t NUM_COLS = 5;
-static const uint32_t NUM_ROWS = 5;
+static const uint32_t NUM_COLS = 20;
+static const uint32_t NUM_ROWS = 20;
 static const real32_t CELL_SIZE = 100;
 static const char_t *CELLS_INFO = "Draw cells: [%d, %d] x [%d, %d]";
 
@@ -113,14 +113,16 @@ static void drawClippedView(App *app, DCtx *ctx,
     /* Calculate the visible cols */
     sti = (uint32_t)bmath_floorf(x / cellSize);
     edi = sti + (uint32_t)bmath_ceilf(width / cellSize) + 1;
-    if (edi > NUM_COLS)
+    if (edi > NUM_COLS) {
         edi = NUM_COLS;
+    }
 
     /* Calculate the visible rows */
     stj = (uint32_t)bmath_floorf(y / cellSize);
     edj = stj + (uint32_t)bmath_ceilf(height / cellSize) + 1;
-    if (edj > NUM_ROWS)
+    if (edj > NUM_ROWS) {
         edj = NUM_ROWS;
+    }
 
     posY = (real32_t)app->margin + stj * cellSize;
 
@@ -135,34 +137,72 @@ static void drawClippedView(App *app, DCtx *ctx,
     draw_fill_color(ctx, color_gray(180));
     draw_line_color(ctx, kCOLOR_BLUE);
     draw_line_width(ctx, 1);
-    draw_text_align(ctx, ekCENTER, ekCENTER);
-    draw_text_halign(ctx, ekCENTER);
+    draw_text_align(ctx, ekLEFT, ekTOP);
+    draw_text_halign(ctx, ekLEFT);
 
-    for (j = stj; j < edj; ++j)     {
+    const color_t glyphColor = color_html("#000080");
+    for (j = stj; j < edj; ++j) {
         posX = (real32_t)app->margin + sti * cellSize;
         for (i = sti; i < edi; ++i) {
             char_t text[128];
-            bool_t special_cell = FALSE;
+            bool_t isHoverCell = FALSE;
 
-            bstd_sprintf(text, sizeof(text), "%d\n%d", i, j);
+            uint32_t n = j * NUM_COLS + i;
+            bstd_sprintf(text, sizeof(text), "%04X", n);
 
             if (app->selectedCellX == i && app->selectedCellY == j) {
                 draw_line_width(ctx, 6);
                 draw_line_color(ctx, kCOLOR_RED);
 
-                special_cell = TRUE;
+                isHoverCell = TRUE;
             } else if (app->mouseCellX == i && app->mouseCellY == j) {
                 draw_line_width(ctx, 3);
                 draw_line_color(ctx, kCOLOR_BLUE);
-                special_cell = TRUE;
+                isHoverCell = TRUE;
             }
 
             draw_rect(ctx, ekSKFILL, posX, posY, CELL_SIZE, CELL_SIZE);
-            draw_text(ctx, text, posX + halfCell, posY + halfCell);
+            draw_text(ctx, text, posX, posY);
 
-            if (special_cell == TRUE) {
+            if (isHoverCell == TRUE) {
                 draw_line_width(ctx, 1);
                 draw_line_color(ctx, kCOLOR_BLUE);
+            }
+
+            if (renderGlyph(&app->fontEngine, n) == 0) {
+                FT_Face face = app->fontEngine.face;
+                FT_Bitmap *gBmp = &face->glyph->bitmap;
+
+                if (gBmp->width > 0 && gBmp->rows > 0) {
+                    Image *img = ftBmp2ImageRGBA(gBmp, glyphColor);
+                    if (img != NULL) {
+                        uint32_t w = image_width(img);
+                        uint32_t h = image_height(img);
+                        uint32_t cs = (uint32_t)CELL_SIZE;
+
+                        if (w > cs || h > cs) {
+                            uint32_t x0 = 0, y0 = 0;
+                            if (w > cs) {
+                                x0 = (w - cs) / 2;
+                                w = cs;
+                            }
+
+                            if (h > cs) {
+                                y0 = (h - cs) / 2;
+                                h = cs;
+                            }
+                            Image *resized = image_trim(img, x0, y0, w, h);
+                            image_destroy(&img);
+                            img = resized;
+                        }
+
+                        draw_image(
+                            ctx, img,
+                            posX + halfCell - (w / 2),
+                            posY + halfCell - (h / 2));
+                        image_destroy(&img);
+                    }
+                }
             }
 
             posX += cellSize;
@@ -600,91 +640,6 @@ static Menu *createMenubar(App *app) {
 }
 
 /*----------------------------------------------------------------------------*/
-static void dumpFontGlyphs(App * app) {
-
-    if (app->fontEngine.ftLibrary == NULL) {
-        log_printf("FreeType library is not initialized.");
-        return;
-    }
-
-    char_t cwd[] = "D:/projects/kaatib/";
-    ferror_t error;
-    bool_t success = bfile_dir_set_work(cwd, &error);
-    if (success) {
-        log_printf("CWD: %s", cwd);
-    } else {
-        log_printf("Failed to change working directory to %s [%d]", cwd, error);
-    }
-
-    const char fontFile[] = "utx/NotoNaskhArabic-VariableFont_wght.ttf";
-    if (loadFontFace(&app->fontEngine, fontFile, 72)) {
-        log_printf("Failed to load font face %s.", fontFile);
-        return;
-    }
-    log_printf("Font face %s successfully loaded.", fontFile);
-
-    FT_Face face = app->fontEngine.face;
-    log_printf(
-        "Face Count: %d, Index: %d, Flags: %08Xh, "
-        "Style: %08Xh, Glyph Count: %0d, Family: '%s', Type: '%s', "
-        "Bitmap Count: %d, Charmap Count: %d",
-        face->num_faces,
-        face->face_index,
-        face->face_flags,
-        face->style_flags,
-        face->num_glyphs,
-        face->family_name,
-        face->style_name,
-        face->num_fixed_sizes,
-        face->num_charmaps
-    );
-
-    const color_t glyphColor = color_html("#000080");
-    uint32_t count = 10; /* face->num_glyphs */
-    for (uint32_t i  = 0; i < count; i++) {
-        if (renderGlyph(&app->fontEngine, i)) {
-            log_printf("Failed to render glyph #%d", i);
-            continue;
-        }
-
-        FT_Bitmap *gBmp = &face->glyph->bitmap;
-        log_printf(
-            "Glyph[%02d], %dx%d, pitch: %d, levels: %d",
-            i,
-            gBmp->width,
-            gBmp->rows,
-            gBmp->pitch,
-            gBmp->num_grays
-        );
-
-        if (gBmp->width == 0 || gBmp->rows == 0) {
-            continue;
-        }
-
-        /* Create a new image from the freetype glyph render */
-        Image *img = ftBmp2ImageRGBA(gBmp, glyphColor);
-        if (img == NULL) {
-            log_printf("Failed to create image for glyph #%d", i);
-            continue;
-        } else {
-            log_printf("Created image for glyph #%d", i);
-            /* Save the image as a PNG file with a filename based on the glyph index */
-            // image_codec(img, ekPNG);
-            // String *fname = str_printf("glyph%02d.png", i);
-            // ferror_t err;
-            // image_to_file(img, tc(fname), &err);
-            // str_destroy(&fname);
-
-            /* Destroy the image to free memory */
-            image_destroy(&img);
-        }
-    }
-
-    closeFontFace(&app->fontEngine);
-    log_printf("Font face %s closed.", fontFile);
-}
-
-/*----------------------------------------------------------------------------*/
 static App *createApp(void) {
     App *app = heap_new0(App);
 
@@ -730,7 +685,12 @@ static App *createApp(void) {
     window_show(app->window);
     scrollToCell(app->view, app->colIdx, app->rowIdx, app->margin); /* Scroll to the given cell */
 
-    dumpFontGlyphs(app);
+    const char fontFile[] = "D:/projects/kaatib/utx/NotoNaskhArabic-VariableFont_wght.ttf";
+    if (loadFontFace(&app->fontEngine, fontFile, 12)) {
+        log_printf("Failed to load font face %s.", fontFile);
+    } else {
+        log_printf("Font face %s successfully loaded.", fontFile);
+    }
 
     return app;
 }
