@@ -14,12 +14,16 @@
  * @brief Chasm-e-Khat is a font glyph viewer application.
  * -------------------------------------------------------------------------- */
 #include <nappgui.h>
+#include <draw2d/pixbuf.h>
+
+#include "ftx.h"
 #include "icons.h"
 
 /*----------------------------------------------------------------------------*/
 typedef struct _app_t App;
 
 struct _app_t {
+    FontEngine fontEngine;
     Window *window;
     Panel *panel;
     Menu *menu;
@@ -62,7 +66,7 @@ static const char_t *CELLS_INFO = "Draw cells: [%d, %d] x [%d, %d]";
  *
  * @param view The view to set the content size for.
  * @param margin The margin around the cells.
- * 
+ *
  * Global constants:
  * - NUM_COLS: The number of columns in the grid.
  * - NUM_ROWS: The number of rows in the grid.
@@ -101,25 +105,25 @@ static void drawClippedView(App *app, DCtx *ctx,
     const real32_t width, const real32_t height) {
     uint32_t sti, edi;
     uint32_t stj, edj;
-    real32_t cellsize = CELL_SIZE + (real32_t)app->margin;
-    real32_t hcell = CELL_SIZE / 2;
-    real32_t posx = 0;
-    real32_t posy = 0;
+    real32_t cellSize = CELL_SIZE + (real32_t)app->margin;
+    real32_t halfCell = CELL_SIZE / 2;
+    real32_t posX = 0;
+    real32_t posY = 0;
     uint32_t i, j;
 
     /* Calculate the visible cols */
-    sti = (uint32_t)bmath_floorf(x / cellsize);
-    edi = sti + (uint32_t)bmath_ceilf(width / cellsize) + 1;
+    sti = (uint32_t)bmath_floorf(x / cellSize);
+    edi = sti + (uint32_t)bmath_ceilf(width / cellSize) + 1;
     if (edi > NUM_COLS)
         edi = NUM_COLS;
 
     /* Calculate the visible rows */
-    stj = (uint32_t)bmath_floorf(y / cellsize);
-    edj = stj + (uint32_t)bmath_ceilf(height / cellsize) + 1;
+    stj = (uint32_t)bmath_floorf(y / cellSize);
+    edj = stj + (uint32_t)bmath_ceilf(height / cellSize) + 1;
     if (edj > NUM_ROWS)
         edj = NUM_ROWS;
 
-    posy = (real32_t)app->margin + stj * cellsize;
+    posY = (real32_t)app->margin + stj * cellSize;
 
     {
         char_t text[256];
@@ -136,7 +140,7 @@ static void drawClippedView(App *app, DCtx *ctx,
     draw_text_halign(ctx, ekCENTER);
 
     for (j = stj; j < edj; ++j)     {
-        posx = (real32_t)app->margin + sti * cellsize;
+        posX = (real32_t)app->margin + sti * cellSize;
         for (i = sti; i < edi; ++i) {
             char_t text[128];
             bool_t special_cell = FALSE;
@@ -154,18 +158,18 @@ static void drawClippedView(App *app, DCtx *ctx,
                 special_cell = TRUE;
             }
 
-            draw_rect(ctx, ekSKFILL, posx, posy, CELL_SIZE, CELL_SIZE);
-            draw_text(ctx, text, posx + hcell, posy + hcell);
+            draw_rect(ctx, ekSKFILL, posX, posY, CELL_SIZE, CELL_SIZE);
+            draw_text(ctx, text, posX + halfCell, posY + halfCell);
 
             if (special_cell == TRUE) {
                 draw_line_width(ctx, 1);
                 draw_line_color(ctx, kCOLOR_BLUE);
             }
 
-            posx += cellsize;
+            posX += cellSize;
         }
 
-        posy += cellsize;
+        posY += cellSize;
     }
 }
 
@@ -179,12 +183,12 @@ static void onDrawView(App *app, Event *e) {
 static void onMouseAction(App *app,
                          const real32_t x, const real32_t y,
                          const uint32_t action) {
-    real32_t cellsize = CELL_SIZE + (real32_t)app->margin;
-    uint32_t mx = (uint32_t)bmath_floorf(x / cellsize);
-    uint32_t my = (uint32_t)bmath_floorf(y / cellsize);
-    real32_t xmin = mx * cellsize + (real32_t)app->margin;
+    real32_t cellSize = CELL_SIZE + (real32_t)app->margin;
+    uint32_t mx = (uint32_t)bmath_floorf(x / cellSize);
+    uint32_t my = (uint32_t)bmath_floorf(y / cellSize);
+    real32_t xmin = mx * cellSize + (real32_t)app->margin;
     real32_t xmax = xmin + CELL_SIZE;
-    real32_t ymin = my * cellsize + (real32_t)app->margin;
+    real32_t ymin = my * cellSize + (real32_t)app->margin;
     real32_t ymax = ymin + CELL_SIZE;
 
     if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
@@ -226,14 +230,14 @@ static void onKeyDown(App *app, Event *e) {
     const EvKey *p = event_params(e, EvKey);
     View *view = event_sender(e, View);
     real32_t margin = (real32_t)app->margin;
-    real32_t cellsize = CELL_SIZE + margin;
+    real32_t cellSize = CELL_SIZE + margin;
     V2Df scroll;
     S2Df size;
 
     view_viewport(view, &scroll, &size);
 
     if (p->key == ekKEY_DOWN && app->selectedCellY < NUM_ROWS - 1) {
-        real32_t ymin = (app->selectedCellY + 1) * cellsize + margin;
+        real32_t ymin = (app->selectedCellY + 1) * cellSize + margin;
         ymin += CELL_SIZE;
 
         if (scroll.y + size.height <= ymin) {
@@ -247,7 +251,7 @@ static void onKeyDown(App *app, Event *e) {
     }
 
     if (p->key == ekKEY_UP && app->selectedCellY > 0) {
-        real32_t ymin = (app->selectedCellY - 1) * cellsize + (real32_t)app->margin;
+        real32_t ymin = (app->selectedCellY - 1) * cellSize + (real32_t)app->margin;
 
         if (scroll.y >= ymin) {
             view_scroll_y(view, ymin - margin);
@@ -260,7 +264,7 @@ static void onKeyDown(App *app, Event *e) {
     }
 
     if (p->key == ekKEY_RIGHT && app->selectedCellX < NUM_COLS - 1) {
-        real32_t xmin = (app->selectedCellX + 1) * cellsize + margin;
+        real32_t xmin = (app->selectedCellX + 1) * cellSize + margin;
         xmin += CELL_SIZE;
 
         if (scroll.x + size.width <= xmin) {
@@ -274,7 +278,7 @@ static void onKeyDown(App *app, Event *e) {
     }
 
     if (p->key == ekKEY_LEFT && app->selectedCellX > 0) {
-        real32_t xmin = (app->selectedCellX - 1) * cellsize + (real32_t)app->margin;
+        real32_t xmin = (app->selectedCellX - 1) * cellSize + (real32_t)app->margin;
 
         if (scroll.x >= xmin) {
             view_scroll_x(view, xmin - margin);
@@ -291,7 +295,7 @@ static void onKeyDown(App *app, Event *e) {
 /*----------------------------------------------------------------------------*/
 static Layout *createControlLayout(App *app) {
     Layout *layout = layout_create(5, 1);
-    
+
     Label *lblGoto = label_create();
     label_text(lblGoto, "Goto Glyph:");
     layout_label(layout, lblGoto, 0, 0);
@@ -299,7 +303,7 @@ static Layout *createControlLayout(App *app) {
     Edit *ebxGlyphId = edit_create();
     edit_align(ebxGlyphId, ekRIGHT);
     layout_edit(layout, ebxGlyphId, 1, 0);
-    
+
     Label *lblGlyphSize = label_create();
     label_text(lblGlyphSize, "Size:");
     layout_label(layout, lblGlyphSize, 2, 0);
@@ -493,7 +497,7 @@ static void onHelpAbout(App *app, Event *e) {
     uint32_t flags = ekWINDOW_TITLE | ekWINDOW_CLOSE | ekWINDOW_RETURN | ekWINDOW_ESC;
     Window *aboutDialog = window_create(flags);
     window_title(aboutDialog, "About Chasm-e-Khat");
-    
+
       Panel *panel = panel_create();
         Layout *layout = layout_create(2, 1);
         layout_margin(layout, 20);
@@ -511,7 +515,7 @@ static void onHelpAbout(App *app, Event *e) {
           label_align(lbl, ekLEFT);
           layout_label(layout, lbl, 1, 0);
           layout_hexpand(layout, 1);
-    
+
         panel_layout(panel, layout);
     window_panel(aboutDialog, panel);
 
@@ -536,7 +540,7 @@ static void onHelpAbout(App *app, Event *e) {
 /*----------------------------------------------------------------------------*/
 static Menu *createMenubar(App *app) {
     Menu *menu = menu_create();
-    
+
     MenuItem *miFile = menuitem_create();
     menuitem_text(miFile, "&File");
 
@@ -598,6 +602,110 @@ static Menu *createMenubar(App *app) {
 }
 
 /*----------------------------------------------------------------------------*/
+static void dumpFontGlyphs(App * app) {
+    /* Load FreeType library and log error for failure */
+    if (initFontEngine(&app->fontEngine)) {
+        log_printf("Failed to load FreeType library.");
+    } else {
+        FT_Int major, minor, patch;
+        FT_Library_Version(app->fontEngine.ftLibrary, &major, &minor, &patch);
+        log_printf("Loaded FreeType version: %d.%d.%d", major, minor, patch);
+
+        char_t cwd[] = "D:/projects/kaatib/";
+        ferror_t error;
+        bool_t success = bfile_dir_set_work(cwd, &error);
+        if (success) {
+            log_printf("CWD: %s", cwd);
+        } else {
+            log_printf("Failed to change working directory to %s [%d]", cwd, error);
+        }
+
+        const char fontFile[] = "utx/NotoNaskhArabic-VariableFont_wght.ttf";
+        if (loadFontFace(&app->fontEngine, fontFile, 72)) {
+            log_printf("Failed to load font face %s.", fontFile);
+        } else {
+            log_printf("Font face %s successfully loaded.", fontFile);
+
+            FT_Face face = app->fontEngine.face;
+            log_printf(
+                "Face Count: %d, Index: %d, Flags: %08Xh, "
+                "Style: %08Xh, Glyph Count: %0d, Family: '%s', Type: '%s', "
+                "Bitmap Count: %d, Charmap Count: %d",
+                face->num_faces,
+                face->face_index,
+                face->face_flags,
+                face->style_flags,
+                face->num_glyphs,
+                face->family_name,
+                face->style_name,
+                face->num_fixed_sizes,
+                face->num_charmaps
+            );
+
+            uint32_t count = 10; /* face->num_glyphs */
+            for (uint32_t i  = 0; i < count; i++) {
+                if (renderGlyph(&app->fontEngine, i)) {
+                    log_printf("Failed to render glyph #%d", i);
+                    continue;
+                }
+
+                FT_Bitmap *gBmp = &face->glyph->bitmap;
+                log_printf(
+                    "Glyph[%02d], %dx%d, pitch: %d, levels: %d",
+                    i,
+                    gBmp->width,
+                    gBmp->rows,
+                    gBmp->pitch,
+                    gBmp->num_grays
+                );
+
+                if (gBmp->width == 0 || gBmp->rows == 0) {
+                    continue;
+                }
+
+                /* Create a new RGBA32 pixbuf for the destination image */
+                Pixbuf *destBuffer = pixbuf_create(gBmp->width, gBmp->rows, ekRGBA32);
+                byte_t *rgbaMap = pixbuf_data(destBuffer);
+                const byte_t glyphColor[] = {0, 0, 0xFF}; // Blue color
+
+                /* Iterate over each row */
+                byte_t *line = (byte_t *)gBmp->buffer;
+                for (uint32_t row = 0; row < gBmp->rows; row++) {
+                    /* Iterate over each pixel in the row */
+                    for (uint32_t j = 0; j < gBmp->width; j++) {
+                        rgbaMap[0] = glyphColor[0];
+                        rgbaMap[1] = glyphColor[1];
+                        rgbaMap[2] = glyphColor[2];
+                        /* Copy source pixel value to destination alpha channel.
+                        Assumes source GRAY8 format. */
+                        rgbaMap[3] = line[j];
+
+                        rgbaMap += 4; /* Next pixel in RGBA map */
+                    }
+                    line += gBmp->pitch; /* Next row in glyph bitmap buffer skipping any padding */
+                }
+
+                /* Create a new image from the destination pixbuf and destroy
+                the intermediate buffer */
+                Image *img = image_from_pixbuf(destBuffer, NULL);
+                pixbuf_destroy(&destBuffer);
+
+                /* Save the image as a PNG file with a filename based on the glyph index */
+                image_codec(img, ekPNG);
+                String *fname = str_printf("glyph%02d.png", i);
+                ferror_t err;
+                // image_to_file(img, tc(fname), &err);
+                str_destroy(&fname);
+
+                /* Destroy the image to free memory */
+                image_destroy(&img);
+            }
+        }
+    }
+
+}
+
+/*----------------------------------------------------------------------------*/
 static App *createApp(void) {
     App *app = heap_new0(App);
 
@@ -613,24 +721,26 @@ static App *createApp(void) {
     app->selectedCellY = app->rowIdx;
     app->drawcolor = gui_alt_color(color_rgb(80, 80, 240), color_rgb(240, 240, 80));
     app->backcolor = gui_alt_color(color_rgb(200, 240, 200), color_rgb(80, 128, 80));
-    
+
     app->window = window_create(ekWINDOW_STDRES);
     window_title(app->window, "Chasm-e-Khat");
     window_origin(app->window, v2df(500, 200));
     window_OnMoved(app->window, listener(app, onMovedEvent, App));
     window_OnClose(app->window, listener(app, onCloseWEvent, App));
-    
+
     Panel *panel = NULL;
     panel = createCentralPanel(app);
     window_panel(app->window, panel);
     app->panel = panel;
     setViewContentSize(app->view, app->margin);  /* Set the view size */
-    
+
     app->menu = createMenubar(app);
     osapp_menubar(app->menu, app->window);
 
     window_show(app->window);
     scrollToCell(app->view, app->colIdx, app->rowIdx, app->margin); /* Scroll to the given cell */
+
+    dumpFontGlyphs(app);
 
     return app;
 }
@@ -643,9 +753,9 @@ static void destroyApp(App **app) {
 }
 
 /*----------------------------------------------------------------------------*/
-static void updateApp(App *app, const real64_t prtime, const real64_t ctime) {
-    unref(prtime);
-    unref(ctime);
+static void updateApp(App *app, const real64_t prTime, const real64_t cTime) {
+    unref(prTime);
+    unref(cTime);
     unref(app);
 }
 

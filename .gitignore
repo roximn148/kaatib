@@ -56,6 +56,7 @@ build/
 
 # vscode specifics
 .vscode/
+*.continuerules
 
 # CMake specifics
 CMakeLists.txt.user

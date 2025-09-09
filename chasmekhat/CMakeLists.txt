@@ -15,10 +15,11 @@ nap_target_cxx_standard(chasmekhat 14)
 
 set(SOURCES
     chasmekhat.c
+    ftx.c
 )
 
 set(HEADERS
-    ""
+    ftx.h
 )
 
 SET(VCPKG_INCLUDE_DIR ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include)
