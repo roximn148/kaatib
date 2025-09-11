@@ -55,7 +55,8 @@ struct _app_t {
 static const uint32_t NUM_COLS = 20;
 static const uint32_t NUM_ROWS = 20;
 static const real32_t CELL_SIZE = 100;
-static const char_t *CELLS_INFO = "Draw cells: [%d, %d] x [%d, %d]";
+static const char_t CELLS_INFO[] = "Draw cells: [%d, %d] x [%d, %d]";
+static const char_t GLYPH_COLOR[] = "#0000C0";
 
 /** ----------------------------------------------------------------------------
  * @brief Set the content size of the view based on the number of columns and rows.
@@ -99,13 +100,55 @@ static void scrollToCell(View *view, uint32_t col, uint32_t row, uint32_t margin
 }
 
 /*----------------------------------------------------------------------------*/
+static void drawGlyphImage(App *app, DCtx *ctx,
+                           real32_t px, real32_t py, uint32_t glyphId) {
+    if (renderGlyph(&app->fontEngine, glyphId) == 0) {
+        const FT_Face face = app->fontEngine.face;
+        const FT_Bitmap *glyphBitmap = &face->glyph->bitmap;
+
+        real32_t halfCell = CELL_SIZE / 2;
+        color_t glyphColor = color_html(GLYPH_COLOR);
+        if (glyphBitmap->width > 0 && glyphBitmap->rows > 0) {
+            Image *img = ftBmp2ImageRGBA(glyphBitmap, glyphColor);
+            if (img != NULL) {
+                uint32_t w = image_width(img);
+                uint32_t h = image_height(img);
+                uint32_t cs = (uint32_t)CELL_SIZE;
+
+                if (w > cs || h > cs) {
+                    uint32_t x0 = 0, y0 = 0;
+                    if (w > cs) {
+                        x0 = (w - cs) / 2;
+                        w = cs;
+                    }
+                    if (h > cs) {
+                        y0 = (h - cs) / 2;
+                        h = cs;
+                    }
+                    Image *resized = image_trim(img, x0, y0, w, h);
+                    image_destroy(&img);
+                    img = resized;
+                }
+
+                draw_image(
+                    ctx, img,
+                    px + halfCell - (w / 2),
+                    py + halfCell - (h / 2)
+                );
+
+                image_destroy(&img);
+            }
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------*/
 static void drawClippedView(App *app, DCtx *ctx,
     const real32_t x, const real32_t y,
     const real32_t width, const real32_t height) {
     uint32_t sti, edi;
     uint32_t stj, edj;
     real32_t cellSize = CELL_SIZE + (real32_t)app->margin;
-    real32_t halfCell = CELL_SIZE / 2;
     real32_t posX = 0;
     real32_t posY = 0;
     uint32_t i, j;
@@ -140,7 +183,6 @@ static void drawClippedView(App *app, DCtx *ctx,
     draw_text_align(ctx, ekLEFT, ekTOP);
     draw_text_halign(ctx, ekLEFT);
 
-    const color_t glyphColor = color_html("#000080");
     for (j = stj; j < edj; ++j) {
         posX = (real32_t)app->margin + sti * cellSize;
         for (i = sti; i < edi; ++i) {
@@ -169,41 +211,7 @@ static void drawClippedView(App *app, DCtx *ctx,
                 draw_line_color(ctx, kCOLOR_BLUE);
             }
 
-            if (renderGlyph(&app->fontEngine, n) == 0) {
-                FT_Face face = app->fontEngine.face;
-                FT_Bitmap *gBmp = &face->glyph->bitmap;
-
-                if (gBmp->width > 0 && gBmp->rows > 0) {
-                    Image *img = ftBmp2ImageRGBA(gBmp, glyphColor);
-                    if (img != NULL) {
-                        uint32_t w = image_width(img);
-                        uint32_t h = image_height(img);
-                        uint32_t cs = (uint32_t)CELL_SIZE;
-
-                        if (w > cs || h > cs) {
-                            uint32_t x0 = 0, y0 = 0;
-                            if (w > cs) {
-                                x0 = (w - cs) / 2;
-                                w = cs;
-                            }
-
-                            if (h > cs) {
-                                y0 = (h - cs) / 2;
-                                h = cs;
-                            }
-                            Image *resized = image_trim(img, x0, y0, w, h);
-                            image_destroy(&img);
-                            img = resized;
-                        }
-
-                        draw_image(
-                            ctx, img,
-                            posX + halfCell - (w / 2),
-                            posY + halfCell - (h / 2));
-                        image_destroy(&img);
-                    }
-                }
-            }
+            drawGlyphImage(app, ctx, posX, posY, n);
 
             posX += cellSize;
         }
@@ -214,8 +222,8 @@ static void drawClippedView(App *app, DCtx *ctx,
 
 /*----------------------------------------------------------------------------*/
 static void onDrawView(App *app, Event *e) {
-    const EvDraw *p = event_params(e, EvDraw);
-    drawClippedView(app, p->ctx, p->x, p->y, p->width, p->height);
+    const EvDraw *ed = event_params(e, EvDraw);
+    drawClippedView(app, ed->ctx, ed->x, ed->y, ed->width, ed->height);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -248,25 +256,25 @@ static void onMouseAction(App *app,
 
 /*----------------------------------------------------------------------------*/
 static void onMouseMove(App *app, Event *e) {
-    const EvMouse *p = event_params(e, EvMouse);
-    onMouseAction(app, p->x, p->y, 0);
+    const EvMouse *em = event_params(e, EvMouse);
+    onMouseAction(app, em->x, em->y, 0);
 }
 
 /*----------------------------------------------------------------------------*/
 static void onMouseUp(App *app, Event *e) {
-    const EvMouse *p = event_params(e, EvMouse);
-    onMouseAction(app, p->x, p->y, 0);
+    const EvMouse *em = event_params(e, EvMouse);
+    onMouseAction(app, em->x, em->y, 0);
 }
 
 /*----------------------------------------------------------------------------*/
 static void onMouseDown(App *app, Event *e) {
-    const EvMouse *p = event_params(e, EvMouse);
-    onMouseAction(app, p->x, p->y, 1);
+    const EvMouse *em = event_params(e, EvMouse);
+    onMouseAction(app, em->x, em->y, 1);
 }
 
 /*----------------------------------------------------------------------------*/
 static void onKeyDown(App *app, Event *e) {
-    const EvKey *p = event_params(e, EvKey);
+    const EvKey *ek = event_params(e, EvKey);
     View *view = event_sender(e, View);
     real32_t margin = (real32_t)app->margin;
     real32_t cellSize = CELL_SIZE + margin;
@@ -275,7 +283,7 @@ static void onKeyDown(App *app, Event *e) {
 
     view_viewport(view, &scroll, &size);
 
-    if (p->key == ekKEY_DOWN && app->selectedCellY < NUM_ROWS - 1) {
+    if (ek->key == ekKEY_DOWN && app->selectedCellY < NUM_ROWS - 1) {
         real32_t ymin = (app->selectedCellY + 1) * cellSize + margin;
         ymin += CELL_SIZE;
 
@@ -289,7 +297,7 @@ static void onKeyDown(App *app, Event *e) {
         view_update(app->view);
     }
 
-    if (p->key == ekKEY_UP && app->selectedCellY > 0) {
+    if (ek->key == ekKEY_UP && app->selectedCellY > 0) {
         real32_t ymin = (app->selectedCellY - 1) * cellSize + (real32_t)app->margin;
 
         if (scroll.y >= ymin) {
@@ -302,7 +310,7 @@ static void onKeyDown(App *app, Event *e) {
         view_update(app->view);
     }
 
-    if (p->key == ekKEY_RIGHT && app->selectedCellX < NUM_COLS - 1) {
+    if (ek->key == ekKEY_RIGHT && app->selectedCellX < NUM_COLS - 1) {
         real32_t xmin = (app->selectedCellX + 1) * cellSize + margin;
         xmin += CELL_SIZE;
 
@@ -316,7 +324,7 @@ static void onKeyDown(App *app, Event *e) {
         view_update(app->view);
     }
 
-    if (p->key == ekKEY_LEFT && app->selectedCellX > 0) {
+    if (ek->key == ekKEY_LEFT && app->selectedCellX > 0) {
         real32_t xmin = (app->selectedCellX - 1) * cellSize + (real32_t)app->margin;
 
         if (scroll.x >= xmin) {
@@ -491,8 +499,8 @@ static Panel *createCentralPanel(App *app) {
 
 /*----------------------------------------------------------------------------*/
 static void onMovedEvent(App *app, Event *e) {
-    const EvPos *p = event_params(e, EvPos);
-    bstd_printf("Window moved: (%d, %d)\n", (uint32_t)p->x, (uint32_t)p->y);
+    const EvPos *ep = event_params(e, EvPos);
+    bstd_printf("Window moved: (%d, %d)\n", (uint32_t)ep->x, (uint32_t)ep->y);
     unref(app);
 }
 
