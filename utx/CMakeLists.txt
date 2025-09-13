@@ -12,3 +12,23 @@ TARGET_INCLUDE_DIRECTORIES(utx PUBLIC "${NAPPGUI_INCLUDE_PATH}")
 
 NAP_TARGET_C_STANDARD(utx 11)
 NAP_TARGET_CXX_STANDARD(utx 14)
+
+set(SOURCES
+    string16.c
+    utils.c
+    cache.c
+    utx.c
+)
+
+set(HEADERS
+    string16.h
+    utils.h
+    cache.h
+    utx.h
+    utx.def
+    utx.hxx
+)
+
+TARGET_SOURCES(utx PRIVATE ${SOURCES} ${HEADERS})
+
+# ******************************************************************************

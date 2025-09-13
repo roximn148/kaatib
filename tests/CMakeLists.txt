@@ -23,6 +23,11 @@ ADD_EXECUTABLE(testUtxUtils test_utxUtils.c)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/utx)
 TARGET_LINK_LIBRARIES(testUtxUtils unity utx ${NAPPGUI_LIBRARIES} Ws2_32)
 
+# TEST GlyphCache
+ADD_EXECUTABLE(testGlyphCache test_glyphCache.c)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/utx)
+TARGET_LINK_LIBRARIES(testGlyphCache unity utx ${NAPPGUI_LIBRARIES} Ws2_32 gdiplus shlwapi)
+
 FIND_PACKAGE(Freetype)
 FIND_PACKAGE(harfbuzz)
 
@@ -47,5 +52,8 @@ TARGET_LINK_LIBRARIES(testKaata
 
 ADD_TEST(testUtx testUtx)
 ADD_TEST(testKaata testKaata)
-add_test(testWcString testWcString)
-add_test(testUtxUtils testUtxUtils)
+ADD_TEST(testWcString testWcString)
+ADD_TEST(testUtxUtils testUtxUtils)
+ADD_TEST(testGlyphCache testGlyphCache)
+
+# ******************************************************************************
