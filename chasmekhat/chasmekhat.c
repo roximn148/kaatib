@@ -423,7 +423,7 @@ static void getTableData(App *app, Event *e) {
 static Layout *createTableLayout(App *app) {
     Layout *layout = layout_create(1, 1);
     TableView *table = tableview_create();
-    tableview_new_column_text(table);
+    tableview_add_column_text(table);
     tableview_size(table, s2df(150, 200));
     tableview_column_width(table, 0, 120);
     tableview_OnData(table, listener(app, getTableData, App));
@@ -693,7 +693,7 @@ static App *createApp(void) {
     window_show(app->window);
     scrollToCell(app->view, app->colIdx, app->rowIdx, app->margin); /* Scroll to the given cell */
 
-    const char fontFile[] = "D:/projects/kaatib/utx/NotoNaskhArabic-VariableFont_wght.ttf";
+    const char fontFile[] = "D:/projects/kaatib/tests/NotoNaskhArabic-VariableFont_wght.ttf";
     if (loadFontFace(&app->fontEngine, fontFile, 12)) {
         log_printf("Failed to load font face %s.", fontFile);
     } else {
