@@ -14,10 +14,16 @@
 #include "utx.hxx"
 #include <draw2d/image.h>
 
+#define EOL UINT16_MAX
 /*----------------------------------------------------------------------------*/
 typedef struct _utx_glyph_image UtxGlyphImage;
 struct _utx_glyph_image {
     uint16_t glyphId;   /* Glyph Index, limited to TTF 16-bit range */
+
+    /* for recent usage ordering (UINT16_MAX = EOL) */
+    UtxGlyphImage *nextGlyph;
+    UtxGlyphImage *prevGlyph;
+
     Image* image;       /* Rendered image of the glyph */
 };
 
@@ -34,6 +40,8 @@ struct _utx_cache {
     FPtrGlyphRender render;
 
     SetSt(UtxGlyphImage)* glyphImages;
+    UtxGlyphImage *mru;
+    UtxGlyphImage *lru;
 
     /* Stats -----------------------------------------------------------------*/
     uint32_t requests;          /* Total requests */
