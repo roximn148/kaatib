@@ -49,6 +49,8 @@ TARGET_LINK_LIBRARIES(testKaata
     PRIVATE harfbuzz::harfbuzz
     PRIVATE Freetype::Freetype
 )
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/NotoNaskhArabic-VariableFont_wght.ttf"
+     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
 ADD_TEST(testUtx testUtx)
 ADD_TEST(testKaata testKaata)

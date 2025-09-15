@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include <core/core.h>
+#include <core/clock.h>
 #include <core/strings.h>
 #include <core/arrpt.h>
 #include <core/heap.h>
@@ -18,6 +19,8 @@
 #include <core/hfile.h>
 #include <sewer/bmath.h>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
 #include <raqm.h>
 
 #include "unity.h"
@@ -39,6 +42,59 @@ void test_RaqmLink(void) {
     raqm_version(&major, &minor, &patch);
     fprintf(stderr, "Raqm version: %d.%d.%d\n", major, minor, patch);
 }
+
+/*----------------------------------------------------------------------------*/
+void test_FreeTypeLink(void) {
+    FT_Library  ftLibrary;
+    FT_Error error = FT_Init_FreeType(&ftLibrary);
+    TEST_ASSERT_EQUAL(0, error);
+
+    FT_Int major, minor, patch;
+    FT_Library_Version(ftLibrary, &major, &minor, &patch);
+    fprintf(stderr, "FreeType version: %d.%d.%d\n", major, minor, patch);
+
+    FT_Done_FreeType(ftLibrary);
+
+}
+
+/*----------------------------------------------------------------------------*/
+void test_FreeTypeRenderTime(void) {
+    FT_Library  ftLibrary;
+    FT_Error error = FT_Init_FreeType(&ftLibrary);
+    TEST_ASSERT_EQUAL_MESSAGE(0, error, "FreeType library could not be loaded.");
+
+    FT_Face face;
+    const char fontFile[] = "NotoNaskhArabic-VariableFont_wght.ttf";
+    error = FT_New_Face(ftLibrary, fontFile, 0, &face);
+    TEST_ASSERT_EQUAL_MESSAGE(0, error, "Font face could not be loaded.");
+
+    fprintf(stderr, "Font Family: '%s'\nTotal Glyphs: %d\n", face->family_name, face->num_glyphs);
+
+    /* The render time is affected by choosen size and dpi */
+    error = FT_Set_Char_Size(face, 144 * 64, 0, 300, 0);
+    TEST_ASSERT_EQUAL_MESSAGE(0, error, "Font face size could not be set.");
+
+    Clock *clock = clock_create(0.0);
+    FT_UInt glyphId;
+    const uint32_t SAMPLES = 1;
+    const uint32_t COUNT = face->num_glyphs * SAMPLES;
+    clock_reset(clock);
+    for (FT_UInt i = 0; i < COUNT; i++) {
+        glyphId = i % face->num_glyphs;
+        error = FT_Load_Glyph(face, glyphId, FT_LOAD_DEFAULT);
+        TEST_ASSERT_EQUAL_MESSAGE(0, error, "Glyph could not be loaded.");
+
+        error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
+        TEST_ASSERT_EQUAL_MESSAGE(0, error, "Glyph could not be rendered.");
+    }
+    real64_t t = clock_elapsed(clock);
+    fprintf(stderr, "Time taken to render %d glyphs: %.6fs (%.3fms per glyph)\n ", COUNT, t, (t/COUNT)*1000.0);
+    clock_destroy(&clock);
+
+    FT_Done_Face(face);
+    FT_Done_FreeType(ftLibrary);
+}
+
 
 /*----------------------------------------------------------------------------*/
 void test_InvertBool(void) {
@@ -110,12 +166,12 @@ void test_StringTrim(void) {
 /*----------------------------------------------------------------------------*/
 void test_stringSplittingWithEmpty(void) {
     /* strs will be a 7-size array of empty strings */
-    const char utf8_line_separator[] = {0xE2, 0x80, 0xA8, '\0'};
-    const char utf8_paragraph_separator[] = {0xE2, 0x80, 0xA9, '\0'};
-    const char utf8_line_feed[] = {0x0A, '\0'};
-    const char utf8_carriage_return[] = {0x0D, '\0'};
-    const char utf8_form_feed[] = {0x0C, '\0'};
-    const char utf8_next_line[] = {0xC2, 0x85, '\0'};
+    const char_t utf8_line_separator[] = {0xE2, 0x80, 0xA8, '\0'};
+    const char_t utf8_paragraph_separator[] = {0xE2, 0x80, 0xA9, '\0'};
+    const char_t utf8_line_feed[] = {0x0A, '\0'};
+    const char_t utf8_carriage_return[] = {0x0D, '\0'};
+    const char_t utf8_form_feed[] = {0x0C, '\0'};
+    const char_t utf8_next_line[] = {0xC2, 0x85, '\0'};
 
     const char_t *str = "||  ||  ||";
     ArrPt(String) *strs = str_splits(str, "||", TRUE, TRUE);
@@ -140,6 +196,9 @@ int main(void) {
     RUN_TEST(test_StringCapacity);
     RUN_TEST(test_WorkingDirectory_Suffix);
     RUN_TEST(test_stringSplittingWithEmpty);
+
+    RUN_TEST(test_FreeTypeLink);
+    RUN_TEST(test_FreeTypeRenderTime);
 
     RUN_TEST(test_RaqmLink);
     return UNITY_END();
