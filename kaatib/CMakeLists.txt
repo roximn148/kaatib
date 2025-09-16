@@ -12,13 +12,13 @@ NAP_DESKTOP_APP(kaatib "" NRC_EMBEDDED)
 NAP_TARGET_C_STANDARD(kaatib 11)
 NAP_TARGET_CXX_STANDARD(kaatib 14)
 
-set(SOURCES
+SET(SOURCES
     main.c
     kaatib.c
     menus.c
 )
 
-set(HEADERS
+SET(HEADERS
     kaatib.h
     menus.h
 )
@@ -42,3 +42,5 @@ TARGET_LINK_LIBRARIES(kaatib
     harfbuzz harfbuzz-subset
     freetype libpng16 brotlicommon brotlidec brotlienc zlib bz2
 )
+
+# ******************************************************************************
