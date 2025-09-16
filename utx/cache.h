@@ -21,8 +21,8 @@ struct _utx_glyph_image {
     uint16_t glyphId;   /* Glyph Index, limited to TTF 16-bit range */
 
     /* for recent usage ordering (UINT16_MAX = EOL) */
-    UtxGlyphImage *nextGlyph;
-    UtxGlyphImage *prevGlyph;
+    uint16_t nextGlyphId;
+    uint16_t prevGlyphId;
 
     Image* image;       /* Rendered image of the glyph */
 };
@@ -30,18 +30,24 @@ struct _utx_glyph_image {
 DeclSt(UtxGlyphImage);
 
 /* -------------------------------------------------------------------------- */
-typedef Image* (*FPtrGlyphRender)(uint16_t gid);
+typedef Image* (*FPtrGlyphRender)(uint16_t gid, void *context);
+
+typedef struct _utx_render_closure RenderClosure;
+struct _utx_render_closure {
+    void *context;
+    FPtrGlyphRender render;
+};
 
 /*----------------------------------------------------------------------------*/
 typedef struct _utx_cache UtxCache;
 struct _utx_cache {
     uint32_t capacity;
 
-    FPtrGlyphRender render;
+    RenderClosure *closure;
 
     SetSt(UtxGlyphImage)* glyphImages;
-    UtxGlyphImage *mru;
-    UtxGlyphImage *lru;
+    uint16_t headId;
+    uint16_t tailId;
 
     /* Stats -----------------------------------------------------------------*/
     uint32_t requests;          /* Total requests */
@@ -64,7 +70,7 @@ struct _utx_cache {
 __EXTERN_C
 
 /*----------------------------------------------------------------------------*/
-_utx_api UtxCache* cacheCreate(uint32_t capacity, FPtrGlyphRender source);
+_utx_api UtxCache* cacheCreate(uint32_t capacity, RenderClosure *source);
 _utx_api void cacheDestroy(UtxCache **pCache);
 _utx_api Image* cacheGet(UtxCache* cache, uint16_t glyphId);
 

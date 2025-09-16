@@ -14,6 +14,7 @@
  * @brief Chasm-e-Khat is a font glyph viewer application.
  * -------------------------------------------------------------------------- */
 #include <nappgui.h>
+#include <cache.h>
 
 #include "ftx.h"
 #include "icons.h"
@@ -23,6 +24,9 @@ typedef struct _app_t App;
 
 struct _app_t {
     FontEngine fontEngine;
+    RenderClosure closure;
+    UtxCache *glyphCache;
+
     Window *window;
     Panel *panel;
     Menu *menu;
@@ -52,11 +56,14 @@ struct _app_t {
     } ui;
 };
 
+static const uint32_t CACHE_CAPACITY = 100;
 static const uint32_t NUM_COLS = 20;
 static const uint32_t NUM_ROWS = 20;
 static const real32_t CELL_SIZE = 100;
 static const char_t CELLS_INFO[] = "Draw cells: [%d, %d] x [%d, %d]";
 static const char_t GLYPH_COLOR[] = "#0000C0";
+static const uint32_t GLYPH_SIZE = 12;
+static const uint32_t GLYPH_DPI = 300;
 
 /** ----------------------------------------------------------------------------
  * @brief Set the content size of the view based on the number of columns and rows.
@@ -100,45 +107,64 @@ static void scrollToCell(View *view, uint32_t col, uint32_t row, uint32_t margin
 }
 
 /*----------------------------------------------------------------------------*/
+Image* fGlyphRenderer(uint16_t glyphId, void *context) {
+    FontEngine *fontEngine = (FontEngine*)context;
+
+    if (renderGlyph(fontEngine, glyphId) != 0) {
+        return NULL;
+    }
+
+    const FT_Face face = fontEngine->face;
+    const FT_Bitmap *glyphBitmap = &face->glyph->bitmap;
+
+    const color_t glyphColor = color_html(GLYPH_COLOR);
+    if (glyphBitmap->width == 0 && glyphBitmap->rows == 0) {
+        return NULL;
+    }
+
+    Image *img = ftBmp2ImageRGBA(glyphBitmap, glyphColor);
+    return img;
+}
+
+/*----------------------------------------------------------------------------*/
 static void drawGlyphImage(App *app, DCtx *ctx,
-                           real32_t px, real32_t py, uint32_t glyphId) {
-    if (renderGlyph(&app->fontEngine, glyphId) == 0) {
-        const FT_Face face = app->fontEngine.face;
-        const FT_Bitmap *glyphBitmap = &face->glyph->bitmap;
+                           real32_t px, real32_t py,
+                           uint16_t glyphId) {
 
-        real32_t halfCell = CELL_SIZE / 2;
-        color_t glyphColor = color_html(GLYPH_COLOR);
-        if (glyphBitmap->width > 0 && glyphBitmap->rows > 0) {
-            Image *img = ftBmp2ImageRGBA(glyphBitmap, glyphColor);
-            if (img != NULL) {
-                uint32_t w = image_width(img);
-                uint32_t h = image_height(img);
-                uint32_t cs = (uint32_t)CELL_SIZE;
+    real32_t halfCell = CELL_SIZE / 2;
+    Image *img = cacheGet(app->glyphCache, glyphId);
+    if (img == NULL) {
+        return;
+    }
 
-                if (w > cs || h > cs) {
-                    uint32_t x0 = 0, y0 = 0;
-                    if (w > cs) {
-                        x0 = (w - cs) / 2;
-                        w = cs;
-                    }
-                    if (h > cs) {
-                        y0 = (h - cs) / 2;
-                        h = cs;
-                    }
-                    Image *resized = image_trim(img, x0, y0, w, h);
-                    image_destroy(&img);
-                    img = resized;
-                }
+    uint32_t w = image_width(img);
+    uint32_t h = image_height(img);
+    uint32_t cs = (uint32_t)CELL_SIZE;
 
-                draw_image(
-                    ctx, img,
-                    px + halfCell - (w / 2),
-                    py + halfCell - (h / 2)
-                );
-
-                image_destroy(&img);
-            }
+    if (w > cs || h > cs) {
+        uint32_t x0 = 0, y0 = 0;
+        if (w > cs) {
+            x0 = (w - cs) / 2;
+            w = cs;
         }
+        if (h > cs) {
+            y0 = (h - cs) / 2;
+            h = cs;
+        }
+
+        Image *resized = image_trim(img, x0, y0, w, h);
+        draw_image(
+            ctx, img,
+            px + halfCell - (w / 2),
+            py + halfCell - (h / 2)
+        );
+        image_destroy(&resized);
+    } else {
+        draw_image(
+            ctx, img,
+            px + halfCell - (w / 2),
+            py + halfCell - (h / 2)
+        );
     }
 }
 
@@ -189,7 +215,7 @@ static void drawClippedView(App *app, DCtx *ctx,
             char_t text[128];
             bool_t isHoverCell = FALSE;
 
-            uint32_t n = j * NUM_COLS + i;
+            uint16_t n = (uint16_t)(j * NUM_COLS + i);
             bstd_sprintf(text, sizeof(text), "%04X", n);
 
             if (app->selectedCellX == i && app->selectedCellY == j) {
@@ -694,10 +720,22 @@ static App *createApp(void) {
     scrollToCell(app->view, app->colIdx, app->rowIdx, app->margin); /* Scroll to the given cell */
 
     const char fontFile[] = "D:/projects/kaatib/tests/NotoNaskhArabic-VariableFont_wght.ttf";
-    if (loadFontFace(&app->fontEngine, fontFile, 12)) {
+    if (loadFontFace(&app->fontEngine, fontFile, GLYPH_SIZE, GLYPH_DPI)) {
         log_printf("Failed to load font face %s.", fontFile);
     } else {
-        log_printf("Font face %s successfully loaded.", fontFile);
+        log_printf("Font face '%s' successfully loaded.", fontFile);
+        log_printf("Font render size set to %d with DPI %d. Total glyph count is %d.",
+                    GLYPH_SIZE, GLYPH_DPI, app->fontEngine.face->num_glyphs);
+    }
+
+    app->closure.context = (void*)&app->fontEngine;
+    app->closure.render = fGlyphRenderer;
+
+    app->glyphCache = cacheCreate(CACHE_CAPACITY, &app->closure);
+    if (app->glyphCache != NULL) {
+        log_printf("Application glyph cache initialized to %d capacity.", CACHE_CAPACITY);
+    } else {
+        log_printf("Application glyph cache failed to initialize");
     }
 
     return app;
@@ -708,6 +746,25 @@ static void destroyApp(App **app) {
     menu_destroy(&(*app)->menu);
     window_destroy(&(*app)->window);
 
+    UtxCache *cache = (*app)->glyphCache;
+    log_printf("Cache Statistics :-------------------------------------------");
+    log_printf("Requests: %d, Hits: %d, Misses: %d",
+                cache->requests,
+                cache->hits,
+                cache->requests-cache->hits);
+    log_printf("Load Factor: %.3f, Evictions: %d",
+                cacheLoadFactor(cache),
+                cache->evictions);
+    log_printf("Hit Rate: %.2f%%, Average Hit Time %.3f ms",
+                cacheHitRate(cache)*100.,
+                cache->avgHitTime*1000.);
+    log_printf("Miss Rate: %.2f%%, Average Miss Penalty: %.3f ms",
+                cacheMissRate(cache)*100.,
+                cache->avgMissPenalty*1000.);
+    log_printf("Average Access Time: %.3f ms", cacheAverageAccessTime(cache)*1000.);
+    log_printf("=============================================================");
+
+    cacheDestroy(&(*app)->glyphCache);
     closeFontFace(&(*app)->fontEngine);
     closeFontEngine(&(*app)->fontEngine);
 

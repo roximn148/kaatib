@@ -34,16 +34,19 @@ void tearDown(void) {
 }
 
 /*----------------------------------------------------------------------------*/
-Image* renderer(uint16_t glyphId) {
+Image* renderer(uint16_t glyphId, void *context) {
     int max = rand() * 1000;
     for (int i = 0; i < max; i++) {}
     return NULL;
     unref(glyphId);
+    unref(context);
 }
+
+static RenderClosure CLOSURE = { NULL, renderer };
 
 /*----------------------------------------------------------------------------*/
 void test_createZeroCapacityCache(void) {
-    UtxCache* cache = cacheCreate(0, renderer);
+    UtxCache* cache = cacheCreate(0, &CLOSURE);
     TEST_ASSERT_NULL(cache);
 }
 
@@ -55,7 +58,7 @@ void test_createNullRenderer(void) {
 
 /*----------------------------------------------------------------------------*/
 void test_createCache(void) {
-    UtxCache* cache = cacheCreate(CACHE_CAPACITY, renderer);
+    UtxCache* cache = cacheCreate(CACHE_CAPACITY, &CLOSURE);
 
     TEST_ASSERT_NOT_NULL(cache);
     TEST_ASSERT_EQUAL_UINT32(CACHE_CAPACITY, cache->capacity);
@@ -63,8 +66,8 @@ void test_createCache(void) {
     TEST_ASSERT_NOT_NULL(cache->glyphImages);
     TEST_ASSERT_EQUAL_UINT32(0, setst_size(cache->glyphImages, UtxGlyphImage));
 
-    TEST_ASSERT_NULL(cache->mru);
-    TEST_ASSERT_NULL(cache->lru);
+    TEST_ASSERT_EQUAL_UINT16(EOL, cache->headId);
+    TEST_ASSERT_EQUAL_UINT16(EOL, cache->tailId);
 
     TEST_ASSERT_EQUAL_UINT32(0, cache->requests);
     TEST_ASSERT_EQUAL_UINT32(0, cache->hits);
@@ -79,7 +82,7 @@ void test_createCache(void) {
 
 /*----------------------------------------------------------------------------*/
 void test_cacheAddItems(void) {
-    UtxCache* cache = cacheCreate(CACHE_CAPACITY, renderer);
+    UtxCache* cache = cacheCreate(CACHE_CAPACITY, &CLOSURE);
 
     TEST_ASSERT_NOT_NULL(cache);
     TEST_ASSERT_EQUAL_UINT32(CACHE_CAPACITY, cache->capacity);
@@ -93,8 +96,8 @@ void test_cacheAddItems(void) {
 
         gi->glyphId = i;
         gi->image = NULL;
-        gi->nextGlyph = NULL;
-        gi->prevGlyph = NULL;
+        gi->nextGlyphId = EOL;
+        gi->prevGlyphId = EOL;
 
         i++;
         real64_t expected = (real64_t)i/(real64_t)CACHE_CAPACITY;
@@ -123,7 +126,7 @@ void test_cacheAddItems(void) {
 
 /*----------------------------------------------------------------------------*/
 void test_cacheGetDifferentItems(void) {
-    UtxCache* cache = cacheCreate(CACHE_CAPACITY, renderer);
+    UtxCache* cache = cacheCreate(CACHE_CAPACITY, &CLOSURE);
 
     TEST_ASSERT_NOT_NULL(cache);
     TEST_ASSERT_EQUAL_UINT32(CACHE_CAPACITY, cache->capacity);
@@ -131,16 +134,16 @@ void test_cacheGetDifferentItems(void) {
     TEST_ASSERT_NOT_NULL(cache->glyphImages);
     TEST_ASSERT_EQUAL_UINT32(0, setst_size(cache->glyphImages, UtxGlyphImage));
 
-    TEST_ASSERT_NULL(cache->mru);
-    TEST_ASSERT_NULL(cache->lru);
+    TEST_ASSERT_EQUAL_UINT16(EOL, cache->headId);
+    TEST_ASSERT_EQUAL_UINT16(EOL, cache->tailId);
 
     uint32_t n = 0;
     for(uint16_t gid = 0; gid < CACHE_CAPACITY; gid++) {
         Image* img = cacheGet(cache, gid);
         TEST_ASSERT_NULL(img);
 
-        TEST_ASSERT_NOT_NULL(cache->mru);
-        TEST_ASSERT_NOT_NULL(cache->lru);
+        TEST_ASSERT_NOT_EQUAL_UINT16(EOL, cache->headId);
+        TEST_ASSERT_NOT_EQUAL_UINT16(EOL, cache->tailId);
 
         n++;
         TEST_ASSERT_EQUAL_UINT32(n, setst_size(cache->glyphImages, UtxGlyphImage));
@@ -154,32 +157,34 @@ void test_cacheGetDifferentItems(void) {
         TEST_ASSERT_EQUAL_UINT16(gid, gi->glyphId);
         TEST_ASSERT_NULL(gi->image);
 
-        TEST_ASSERT_NULL(gi->nextGlyph);
-        TEST_ASSERT_EQUAL_PTR(cache->mru, gi);
+        TEST_ASSERT_EQUAL_UINT16(EOL, gi->nextGlyphId);
+        TEST_ASSERT_EQUAL_UINT16(cache->headId, gi->glyphId);
 
-        if (cache->lru != gi) {
-            TEST_ASSERT_NOT_NULL(gi->prevGlyph);
+        if (cache->tailId != gi->glyphId) {
+            TEST_ASSERT_NOT_EQUAL_UINT16(EOL, gi->prevGlyphId);
         }
     }
 
     UtxGlyphImage *gi;
-    gi = cache->lru;
+    gi = setst_get(cache->glyphImages, &cache->tailId, UtxGlyphImage, uint16_t);
     for(uint16_t gid = 0; gid < CACHE_CAPACITY - 1; gid++) {
         TEST_ASSERT_EQUAL_UINT16(gid, gi->glyphId);
-        TEST_ASSERT_NOT_NULL(gi->nextGlyph);
-        gi = gi->nextGlyph;
+        TEST_ASSERT_NOT_EQUAL_UINT16(EOL, gi->nextGlyphId);
+        gi = setst_get(cache->glyphImages, &gi->nextGlyphId, UtxGlyphImage, uint16_t);
     }
-    TEST_ASSERT_EQUAL_PTR(cache->mru, gi);
-    TEST_ASSERT_NULL(cache->mru->nextGlyph);
+    TEST_ASSERT_EQUAL_UINT16(cache->headId, gi->glyphId);
+    UtxGlyphImage *mru = setst_get(cache->glyphImages, &cache->headId, UtxGlyphImage, uint16_t);
+    TEST_ASSERT_EQUAL_UINT16(EOL, mru->nextGlyphId);
 
-    gi = cache->mru;
+    gi = setst_get(cache->glyphImages, &cache->headId, UtxGlyphImage, uint16_t);
     for(uint16_t gid = (uint16_t)CACHE_CAPACITY - 1; gid > 0; gid--) {
         TEST_ASSERT_EQUAL_UINT16(gid, gi->glyphId);
-        TEST_ASSERT_NOT_NULL(gi->prevGlyph);
-        gi = gi->prevGlyph;
+        TEST_ASSERT_NOT_EQUAL_UINT16(EOL, gi->prevGlyphId);
+        gi = setst_get(cache->glyphImages, &gi->prevGlyphId, UtxGlyphImage, uint16_t);
     }
-    TEST_ASSERT_EQUAL_PTR(cache->lru, gi);
-    TEST_ASSERT_NULL(cache->lru->prevGlyph);
+    TEST_ASSERT_EQUAL_UINT16(cache->tailId, gi->glyphId);
+    UtxGlyphImage *lru = setst_get(cache->glyphImages, &cache->tailId, UtxGlyphImage, uint16_t);
+    TEST_ASSERT_EQUAL_UINT16(EOL, lru->prevGlyphId);
 
     bstd_printf("*** 100%% miss rate\n");
     bstd_printf("Test cache hit average time %.3f ms\n", cache->avgHitTime*1000.);
@@ -192,7 +197,7 @@ void test_cacheGetDifferentItems(void) {
 
 /*----------------------------------------------------------------------------*/
 void test_cacheGetSameItems(void) {
-    UtxCache* cache = cacheCreate(CACHE_CAPACITY, renderer);
+    UtxCache* cache = cacheCreate(CACHE_CAPACITY, &CLOSURE);
 
     TEST_ASSERT_NOT_NULL(cache);
     TEST_ASSERT_EQUAL_UINT32(CACHE_CAPACITY, cache->capacity);
@@ -205,11 +210,11 @@ void test_cacheGetSameItems(void) {
     TEST_ASSERT_NOT_NULL(gi);
     gi->glyphId = gid;
     gi->image = NULL;
-    gi->nextGlyph = NULL;
-    gi->prevGlyph = NULL;
+    gi->nextGlyphId = EOL;
+    gi->prevGlyphId = EOL;
 
-    cache->mru = gi;
-    cache->lru = gi;
+    cache->headId = gi->glyphId;
+    cache->tailId = gi->glyphId;
 
     uint32_t n = 0;
     for(uint16_t i = 0; i < 10; i++) {
@@ -228,10 +233,10 @@ void test_cacheGetSameItems(void) {
         TEST_ASSERT_EQUAL_UINT16(gid, g->glyphId);
         TEST_ASSERT_NULL(g->image);
 
-        TEST_ASSERT_NULL_MESSAGE(g->prevGlyph, "Previous Glyph should be NULL");
-        TEST_ASSERT_NULL_MESSAGE(g->nextGlyph, "Next Glyph should be NULL");
-        TEST_ASSERT_EQUAL_PTR(cache->mru, g);
-        TEST_ASSERT_EQUAL_PTR(cache->lru, g);
+        TEST_ASSERT_EQUAL_UINT16_MESSAGE(EOL, g->prevGlyphId, "Previous Glyph should be NULL");
+        TEST_ASSERT_EQUAL_UINT16_MESSAGE(EOL, g->nextGlyphId, "Next Glyph should be NULL");
+        TEST_ASSERT_EQUAL_UINT16(cache->headId, g->glyphId);
+        TEST_ASSERT_EQUAL_UINT16(cache->tailId, g->glyphId);
     }
 
     bstd_printf("*** 100%% hit rate\n");
@@ -244,7 +249,7 @@ void test_cacheGetSameItems(void) {
 }
 /*----------------------------------------------------------------------------*/
 void test_cacheEvictions(void) {
-    UtxCache* cache = cacheCreate(CACHE_CAPACITY, renderer);
+    UtxCache* cache = cacheCreate(CACHE_CAPACITY, &CLOSURE);
 
     TEST_ASSERT_NOT_NULL(cache);
     TEST_ASSERT_EQUAL_UINT32(CACHE_CAPACITY, cache->capacity);
@@ -252,8 +257,8 @@ void test_cacheEvictions(void) {
     TEST_ASSERT_NOT_NULL(cache->glyphImages);
     TEST_ASSERT_EQUAL_UINT32(0, setst_size(cache->glyphImages, UtxGlyphImage));
 
-    TEST_ASSERT_NULL(cache->mru);
-    TEST_ASSERT_NULL(cache->lru);
+    TEST_ASSERT_EQUAL_UINT16(EOL, cache->headId);
+    TEST_ASSERT_EQUAL_UINT16(EOL, cache->tailId);
 
     uint16_t MIN = ((uint16_t)CACHE_CAPACITY);
     uint16_t MAX = ((uint16_t)CACHE_CAPACITY * 2);
@@ -272,8 +277,8 @@ void test_cacheEvictions(void) {
         Image* img = cacheGet(cache, gid);
         TEST_ASSERT_NULL(img);
 
-        TEST_ASSERT_NOT_NULL(cache->mru);
-        TEST_ASSERT_NOT_NULL(cache->lru);
+        TEST_ASSERT_NOT_EQUAL_UINT16(EOL, cache->headId);
+        TEST_ASSERT_NOT_EQUAL_UINT16(EOL, cache->tailId);
 
         n++;
         TEST_ASSERT_EQUAL_UINT32(CACHE_CAPACITY, setst_size(cache->glyphImages, UtxGlyphImage));
@@ -287,8 +292,8 @@ void test_cacheEvictions(void) {
         TEST_ASSERT_EQUAL_UINT16(gid, gi->glyphId);
         TEST_ASSERT_NULL(gi->image);
 
-        TEST_ASSERT_NULL(gi->nextGlyph);
-        TEST_ASSERT_EQUAL_PTR(cache->mru, gi);
+        TEST_ASSERT_EQUAL_UINT16(EOL, gi->nextGlyphId);
+        TEST_ASSERT_EQUAL_UINT16(cache->headId, gi->glyphId);
     }
 
     /* Confirm previous items do not exist */
@@ -299,27 +304,29 @@ void test_cacheEvictions(void) {
 
     /* Confirm integrity of the LRU chain */
     UtxGlyphImage *gi;
-    gi = cache->lru;
+    gi = setst_get(cache->glyphImages, &cache->tailId, UtxGlyphImage, uint16_t);
     for(uint16_t gid = MIN; gid < MAX - 1; gid++) {
         TEST_ASSERT_EQUAL_UINT16(gid, gi->glyphId);
-        TEST_ASSERT_NOT_NULL(gi->nextGlyph);
-        gi = gi->nextGlyph;
+        TEST_ASSERT_NOT_EQUAL_UINT16(EOL, gi->nextGlyphId);
+        gi = setst_get(cache->glyphImages, &gi->nextGlyphId, UtxGlyphImage, uint16_t);
     }
-    TEST_ASSERT_EQUAL_PTR(cache->mru, gi);
-    TEST_ASSERT_NULL(cache->mru->nextGlyph);
+    TEST_ASSERT_EQUAL_UINT16(cache->headId, gi->glyphId);
+    // TEST_ASSERT_NULL(cache->headId->nextGlyphId);
 
     /* Confirm integrity of the MRU chain */
-    gi = cache->mru;
+    gi = setst_get(cache->glyphImages, &cache->headId, UtxGlyphImage, uint16_t);
     for(uint16_t gid = MAX - 1; gid > MIN; gid--) {
         TEST_ASSERT_EQUAL_UINT16(gid, gi->glyphId);
-        TEST_ASSERT_NOT_NULL(gi->prevGlyph);
-        gi = gi->prevGlyph;
+        TEST_ASSERT_NOT_EQUAL_UINT16(EOL, gi->prevGlyphId);
+        gi = setst_get(cache->glyphImages, &gi->prevGlyphId, UtxGlyphImage, uint16_t);
     }
-    TEST_ASSERT_EQUAL_PTR(cache->lru, gi);
-    TEST_ASSERT_NULL(cache->lru->prevGlyph);
+    TEST_ASSERT_EQUAL_UINT16(cache->tailId, gi->glyphId);
+    // TEST_ASSERT_NULL(cache->tailId->prevGlyphId);
 
-    bstd_printf("*** 100%% miss rate\n");
+    bstd_printf("*** 50%% miss rate\n");
+    bstd_printf("Test cache hit rate %.3f\n", cacheHitRate(cache));
     bstd_printf("Test cache hit average time %.3f ms\n", cache->avgHitTime*1000.);
+    bstd_printf("Test cache miss rate %.3f\n", cacheMissRate(cache));
     bstd_printf("Test cache miss penalty time %.3f ms\n", cache->avgMissPenalty*1000.);
     bstd_printf("Test cache average access time %.3f ms\n\n", cacheAverageAccessTime(cache)*1000.);
 

@@ -7,18 +7,17 @@
 #
 # Author: roximn <roximn148@gmail.com>
 # ******************************************************************************
+NAP_DESKTOP_APP(chasmekhat "" NRC_EMBEDDED)
 
-nap_desktop_app(chasmekhat "" NRC_EMBEDDED)
+NAP_TARGET_C_STANDARD(chasmekhat 11)
+NAP_TARGET_CXX_STANDARD(chasmekhat 14)
 
-nap_target_c_standard(chasmekhat 11)
-nap_target_cxx_standard(chasmekhat 14)
-
-set(SOURCES
+SET(SOURCES
     chasmekhat.c
     ftx.c
 )
 
-set(HEADERS
+SET(HEADERS
     ftx.h
 )
 
@@ -27,6 +26,7 @@ SET(VCPKG_LIB_DIR ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib)
 
 TARGET_SOURCES(chasmekhat PRIVATE ${SOURCES} ${HEADERS})
 INCLUDE_DIRECTORIES(
+    ${PROJECT_SOURCE_DIR}/utx
     ${VCPKG_INCLUDE_DIR}
 )
 TARGET_LINK_DIRECTORIES(chasmekhat PRIVATE ${VCPKG_LIB_DIR})
@@ -34,6 +34,7 @@ TARGET_LINK_DIRECTORIES(chasmekhat PRIVATE ${VCPKG_LIB_DIR})
 SET_TARGET_PROPERTIES(chasmekhat PROPERTIES OUTPUT_NAME "chasm-e-khat")
 
 TARGET_LINK_LIBRARIES(chasmekhat
+    utx
     ${NAPPGUI_LIBRARIES}
     Ws2_32
     freetype libpng16 brotlicommon brotlidec brotlienc zlib bz2

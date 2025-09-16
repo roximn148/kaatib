@@ -19,14 +19,8 @@
  * @brief Release resources of the GlyphImage item when removing from cache
  * -------------------------------------------------------------------------- */
 static void fGlyphDestroy(UtxGlyphImage *gi) {
-    if (gi != NULL) {
-        if (gi->image != NULL) {
-            image_destroy(&gi->image);
-        } else {
-            log_printf("ERROR: gid#%d has NULL render", gi->glyphId);
-        }
-    } else {
-        log_printf("ERROR: removing NULL GlyphImage");
+    if (gi != NULL && gi->image != NULL) {
+        image_destroy(&gi->image);
     }
 }
 
@@ -43,18 +37,18 @@ static int fGlyphCompare(const UtxGlyphImage *gi, const uint16_t *glyphId) {
 /** ----------------------------------------------------------------------------
  * @brief Create a new glyph cache of given capacity
  * -------------------------------------------------------------------------- */
-UtxCache* cacheCreate(uint32_t capacity, FPtrGlyphRender fpRenderer) {
-    if (capacity < 1 || fpRenderer == NULL) {
+UtxCache* cacheCreate(uint32_t capacity, RenderClosure *closure) {
+    if (capacity < 1 || closure == NULL) {
         return NULL;
     }
 
     UtxCache *cache = heap_new0(UtxCache);
     cache->capacity = capacity;
-    cache->render = fpRenderer;
+    cache->closure = closure;
 
     cache->glyphImages = setst_create(fGlyphCompare, UtxGlyphImage, uint16_t);
-    cache->mru = NULL;
-    cache->lru = NULL;
+    cache->headId = EOL;
+    cache->tailId = EOL;
 
     return cache;
 }
@@ -76,30 +70,28 @@ Image* cacheGet(UtxCache* cache, uint16_t glyphId) {
 
     clock_reset(clock);
     cache->requests += 1;
-    UtxGlyphImage *gi = setst_get(cache->glyphImages, &glyphId, UtxGlyphImage, uint16_t);
-    if (gi != NULL) {
+    UtxGlyphImage *pCurrentGlyphImage = setst_get(cache->glyphImages, &glyphId, UtxGlyphImage, uint16_t);
+    if (pCurrentGlyphImage != NULL) {
         /* Cache Hit =========================================================*/
         /* Detach */
-        if(cache->mru != gi) {
-            if (gi->prevGlyph != NULL) {
-                UtxGlyphImage *prev = gi->prevGlyph;
-                prev->nextGlyph = gi->nextGlyph;
+        if(cache->headId != pCurrentGlyphImage->glyphId) {
+            if (pCurrentGlyphImage->prevGlyphId != EOL) {
+                UtxGlyphImage *prev = setst_get(cache->glyphImages, &pCurrentGlyphImage->prevGlyphId, UtxGlyphImage, uint16_t);
+                prev->nextGlyphId = pCurrentGlyphImage->nextGlyphId;
             }
-            if (gi->nextGlyph != NULL) {
-                UtxGlyphImage *next = gi->nextGlyph;
-                next->prevGlyph = gi->prevGlyph;
+            if (pCurrentGlyphImage->nextGlyphId != EOL) {
+                UtxGlyphImage *next = setst_get(cache->glyphImages, &pCurrentGlyphImage->nextGlyphId, UtxGlyphImage, uint16_t);
+                next->prevGlyphId = pCurrentGlyphImage->prevGlyphId;
             }
 
             /* Push to list top */
-            if (cache->mru != NULL) {
-                UtxGlyphImage *mru = cache->mru;
-                mru->nextGlyph = gi;
-                gi->prevGlyph = mru;
-            } else {
-                log_printf("Invalid MRU(NULL) encountered with cache hit!!!");
+            if (cache->headId != EOL) {
+                UtxGlyphImage *mru = setst_get(cache->glyphImages, &cache->headId, UtxGlyphImage, uint16_t);
+                mru->nextGlyphId = pCurrentGlyphImage->glyphId;
+                pCurrentGlyphImage->prevGlyphId = mru->glyphId;
             }
-            cache->mru = gi;
-            gi->nextGlyph = NULL;
+            cache->headId = pCurrentGlyphImage->glyphId;
+            pCurrentGlyphImage->nextGlyphId = EOL;
         }
 
         /* Stats =============================================================*/
@@ -109,38 +101,35 @@ Image* cacheGet(UtxCache* cache, uint16_t glyphId) {
         cache->avgHitTime += (t - cache->avgHitTime) / N;
     } else {
         /* Cache Miss ========================================================*/
-        gi = setst_insert(cache->glyphImages, &glyphId, UtxGlyphImage, uint16_t);
-        if (gi != NULL) {
-            gi->glyphId = glyphId;
-            gi->image = cache->render(glyphId);
-            gi->prevGlyph = NULL;
-            gi->nextGlyph = NULL;
+        pCurrentGlyphImage = setst_insert(cache->glyphImages, &glyphId, UtxGlyphImage, uint16_t);
+        if (pCurrentGlyphImage != NULL) {
+            pCurrentGlyphImage->glyphId = glyphId;
+            RenderClosure *closure = cache->closure;
+            pCurrentGlyphImage->image = closure->render(glyphId, closure->context);
+            pCurrentGlyphImage->prevGlyphId = EOL;
+            pCurrentGlyphImage->nextGlyphId = EOL;
 
             /* Push to list top */
-            if (cache->mru != NULL) {
-                UtxGlyphImage *mru = cache->mru;
-                mru->nextGlyph = gi;
-                gi->prevGlyph = mru;
+            if (cache->headId != EOL) {
+                UtxGlyphImage *mru = setst_get(cache->glyphImages, &cache->headId, UtxGlyphImage, uint16_t);
+                mru->nextGlyphId = pCurrentGlyphImage->glyphId;
+                pCurrentGlyphImage->prevGlyphId = mru->glyphId;
             } else {
-                cache->lru = gi;
+                cache->tailId = pCurrentGlyphImage->glyphId;
             }
-            cache->mru = gi;
+            cache->headId = pCurrentGlyphImage->glyphId;
 
-            /* If capcity exceeded, pop the MRU list bottom */
+            /* If capcity exceeded, evict the MRU list tail */
             while (setst_size(cache->glyphImages, UtxGlyphImage) > cache->capacity) {
-                UtxGlyphImage *lru = cache->lru;
+                UtxGlyphImage *lru = setst_get(cache->glyphImages, &cache->tailId, UtxGlyphImage, uint16_t);
                 if (lru != NULL) {
-                    UtxGlyphImage *next = lru->nextGlyph;
+                    UtxGlyphImage *next = setst_get(cache->glyphImages, &lru->nextGlyphId, UtxGlyphImage, uint16_t);
                     if (next != NULL) {
-                        next->prevGlyph = NULL;
-                        cache->lru = next;
-                    } else {
-                        log_printf("Invalid LRU->next(NULL) encountered with full cache!!!");
+                        next->prevGlyphId = EOL;
+                        cache->tailId = next->glyphId;
                     }
                     setst_delete(cache->glyphImages, &lru->glyphId, fGlyphDestroy, UtxGlyphImage, uint16_t);
                     cache->evictions += 1;
-                } else {
-                    log_printf("Invalid LRU(NULL) encountered with full cache!!!");
                 }
             }
 
@@ -149,13 +138,11 @@ Image* cacheGet(UtxCache* cache, uint16_t glyphId) {
             uint32_t misses = cache->requests - cache->hits;
             uint32_t N = misses > FACTOR ? misses : FACTOR;
             cache->avgMissPenalty += (t - cache->avgMissPenalty) / N;
-        } else {
-            log_printf("Failed to insert GlyphImage into cache for gid %d", glyphId);
         }
     }
 
     clock_destroy(&clock);
-    return gi->image;
+    return pCurrentGlyphImage->image;
 }
 
 /** ----------------------------------------------------------------------------
@@ -226,7 +213,7 @@ real64_t cacheAverageAccessTime(UtxCache* cache) {
         return 0.0;
     }
 
-    return (cache->avgHitTime + cache->avgMissPenalty) * cacheHitRate(cache);
+    return cache->avgHitTime + (cache->avgMissPenalty * cacheMissRate(cache));
 }
 
 /** ----------------------------------------------------------------------------

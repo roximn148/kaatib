@@ -16,6 +16,7 @@
 #include "ftx.h"
 
 #include <draw2d/pixbuf.h>
+#include <osbs/log.h>
 
  /** ---------------------------------------------------------------------------
  * @brief Initialize the font engine.
@@ -69,14 +70,20 @@ int closeFontEngine(FontEngine *fe) {
  * @param fontSize Size of the font in points (1 point = 1/72 inch).
  * @return int Returns 0 on success, -1 on failure.
  * -------------------------------------------------------------------------- */
-int loadFontFace(FontEngine *fe, const char *fontPath, unsigned int fontSize) {
+int loadFontFace(FontEngine *fe, const char *fontPath, unsigned int fontSize, unsigned int dpi) {
     if (fe == NULL || fe->ftLibrary == NULL) {
         return -1;
     }
-    if (FT_New_Face(fe->ftLibrary, fontPath, 0, &fe->face)) {
+    FT_Error error;
+
+    error = FT_New_Face(fe->ftLibrary, fontPath, 0, &fe->face);
+    if (error != 0) {
+        log_printf("Error[%d]: Unable to load font face from %s", error, fontPath);
         return -1; /* Error loading font face */
     }
-    if (FT_Set_Char_Size(fe->face, fontSize * 64, 0, 300, 0)) {
+    error = FT_Set_Char_Size(fe->face, fontSize * 64, 0, dpi, 0);
+    if (error != 0) {
+        log_printf("Error[%d]: Unable to set font face %s to size %d", error, fe->face->family_name, fontSize);
         return -1; /* Error setting font size */
     }
     return 0; /* Success */
@@ -116,11 +123,14 @@ int renderGlyph(FontEngine *fe, unsigned int glyphId) {
     }
     FT_Error error = FT_Load_Glyph(fe->face, glyphId, FT_LOAD_DEFAULT);
     if (error) {
+        log_printf("Error loading glyph %d, Face: %s", glyphId, fe->face->family_name);
         return -1; /* Error loading glyph */
     }
     error = FT_Render_Glyph(fe->face->glyph, FT_RENDER_MODE_NORMAL);
-    if (error)
-      return -1; /* Error rendering glyph */;
+    if (error) {
+        log_printf("Error rendering glyph %d, Face: %s", glyphId, fe->face->family_name);
+        return -1; /* Error rendering glyph */;
+    }
 
     return 0; /* Success */
 }

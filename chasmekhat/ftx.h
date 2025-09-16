@@ -35,7 +35,7 @@ typedef struct {
 int initFontEngine(FontEngine *fe);
 int closeFontEngine(FontEngine *fe);
 
-int loadFontFace(FontEngine *fe, const char *fontPath, unsigned int fontSize);
+int loadFontFace(FontEngine *fe, const char *fontPath, unsigned int fontSize, unsigned int dpi);
 int closeFontFace(FontEngine *fe);
 
 int renderGlyph(FontEngine *fe, unsigned int glyphId);
