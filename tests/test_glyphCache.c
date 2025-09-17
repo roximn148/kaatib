@@ -107,7 +107,7 @@ void test_cacheAddItems(void) {
     TEST_ASSERT_EQUAL_UINT32(CACHE_CAPACITY,
         setst_size(cache->glyphImages, UtxGlyphImage));
 
-    setst_foreach(glyphImage, cache->glyphImages, UtxGlyphImage)
+    setst_foreach(glyphImage, cache->glyphImages, UtxGlyphImage);
         TEST_ASSERT_EQUAL_UINT16(glyphImage_i, glyphImage->glyphId);
         TEST_ASSERT_NULL(glyphImage->image);
     setst_fornext(glyphImage, cache->glyphImages, UtxGlyphImage);

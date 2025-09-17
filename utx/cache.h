@@ -80,6 +80,9 @@ _utx_api real64_t cacheMissRate(UtxCache* cache);
 _utx_api real64_t cacheEvictionRate(UtxCache* cache);
 _utx_api real64_t cacheAverageAccessTime(UtxCache* cache);
 
+_utx_api void cacheDump(UtxCache *cache, const char_t *filename, const char_t *label);
+_utx_api void cacheToStream(UtxCache *cache, Stream *strm);
+
 /*----------------------------------------------------------------------------*/
 __END_C
 
