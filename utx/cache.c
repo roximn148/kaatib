@@ -55,14 +55,19 @@ UtxCache* cacheCreate(uint32_t capacity, RenderClosure *closure) {
     return cache;
 }
 
-
-
 /** ----------------------------------------------------------------------------
  * @brief Create new glyph image node
  * -------------------------------------------------------------------------- */
 static UtxGlyphImage* nodeCreate(UtxCache* cache, uint16_t glyphId) {
     cassert_no_null(cache);
     cassert(glyphId != EOL);
+
+    RenderClosure *closure = cache->closure;
+    Image *img = closure->render(glyphId, closure->context);
+
+    if (img == NULL) {
+        return NULL;
+    }
 
     UtxGlyphImage *newGlyphImage = setst_insert(
         cache->glyphImages, &glyphId,
@@ -72,9 +77,10 @@ static UtxGlyphImage* nodeCreate(UtxCache* cache, uint16_t glyphId) {
         newGlyphImage->glyphId = glyphId;
         newGlyphImage->prevGlyphId = EOL;
         newGlyphImage->nextGlyphId = EOL;
-
-        RenderClosure *closure = cache->closure;
-        newGlyphImage->image = closure->render(glyphId, closure->context);
+        newGlyphImage->image = img;
+    } else {
+        image_destroy(&img);
+        log_printf("Failed to create node for gid#%d", glyphId);
     }
 
     return newGlyphImage;
@@ -189,19 +195,21 @@ Image* cacheGet(UtxCache* cache, uint16_t glyphId) {
 
     } else { /* Cache Miss ===================================================*/
         gi = nodeCreate(cache, glyphId);
-        nodeAddToTop(cache, gi);
+        if (gi != NULL) {
+            nodeAddToTop(cache, gi);
 
-        /* If capcity exceeded, evict the MRU list tail */
-        while (setst_size(cache->glyphImages, UtxGlyphImage) > cache->capacity) {
-            {
-                UtxGlyphImage *lru = setst_get(
-                    cache->glyphImages, &cache->tailId,
-                    UtxGlyphImage, uint16_t);
-                nodeDetach(cache, lru);
-                bool_t deleted = nodeDelete(cache, lru);
-                cassert(deleted);
+            /* If capcity exceeded, evict the MRU list tail */
+            while (setst_size(cache->glyphImages, UtxGlyphImage) > cache->capacity) {
+                {
+                    UtxGlyphImage *lru = setst_get(
+                        cache->glyphImages, &cache->tailId,
+                        UtxGlyphImage, uint16_t);
+                    nodeDetach(cache, lru);
+                    bool_t deleted = nodeDelete(cache, lru);
+                    cassert(deleted);
+                }
+                cache->evictions += 1;
             }
-            cache->evictions += 1;
         }
 
         /* Stats -------------------------------------------------------------*/
@@ -212,7 +220,11 @@ Image* cacheGet(UtxCache* cache, uint16_t glyphId) {
     }
 
     clock_destroy(&clock);
-    return gi->image;
+    if (gi != NULL){
+        return gi->image;
+     } else {
+        return NULL;
+     }
 }
 
 /** ----------------------------------------------------------------------------
