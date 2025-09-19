@@ -68,6 +68,7 @@ int closeFontEngine(FontEngine *fe) {
  * @param app Pointer to the FontEngine structure.
  * @param fontPath Path to the font file.
  * @param fontSize Size of the font in points (1 point = 1/72 inch).
+ * @param dpi Resolution of font glyph rendering.
  * @return int Returns 0 on success, -1 on failure.
  * -------------------------------------------------------------------------- */
 int loadFontFace(FontEngine *fe, const char *fontPath, unsigned int fontSize, unsigned int dpi) {
@@ -102,7 +103,11 @@ int closeFontFace(FontEngine *fe) {
     if (fe == NULL || fe->face == NULL) {
         return 0;
     }
-    FT_Done_Face(fe->face);
+    FT_Error error = FT_Done_Face(fe->face);
+    if (error != 0) {
+        log_printf("Error[%d]: Unable to close font face.", error);
+        return -1; /* Error closing font */
+    }
     fe->face = NULL;
     return 0; /* Success */
 }
