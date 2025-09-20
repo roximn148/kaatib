@@ -20,13 +20,22 @@
 #include "icons.h"
 
 /*----------------------------------------------------------------------------*/
-typedef struct _view_grid_t {
+typedef struct _view_grid_t ViewGrid;
+struct _view_grid_t {
+    uint16_t glyphIdx;
     uint32_t columnCount;
     uint32_t rowCount;
     uint32_t totalCells;
     real32_t cellSize;
     real32_t cellMargin;
-} ViewGrid;
+
+    uint32_t hoverCellX;
+    uint32_t hoverCellY;
+    uint32_t selectedCellX;
+    uint32_t selectedCellY;
+
+    color_t boxColor;
+};
 
 typedef struct _app_t App;
 struct _app_t {
@@ -36,16 +45,7 @@ struct _app_t {
 
     ViewGrid grid;
 
-    uint32_t colIdx;
-    uint32_t rowIdx;
-    uint32_t mouseCellX;
-    uint32_t mouseCellY;
-    uint32_t selectedCellX;
-    uint32_t selectedCellY;
-
-    char_t temptxt[256];
-    color_t drawcolor;
-    color_t backcolor;
+    char_t nameColumn[256];
 
     struct _ui_t {
         Window *window;
@@ -66,10 +66,9 @@ struct _app_t {
     } ui;
 };
 
-static const char_t CELLS_INFO[] = "Draw cells: [%d, %d] x [%d, %d]";
 static const char_t GLYPH_COLOR[] = "#0000C0";
-static const uint32_t GLYPH_SIZE = 12;
-static const uint32_t GLYPH_DPI = 300;
+static const uint32_t GLYPH_SIZE = 16;
+static const uint32_t GLYPH_DPI = 256;
 
 /** ----------------------------------------------------------------------------
  * @brief Scrolls the view to the specified cell.
@@ -79,50 +78,52 @@ static const uint32_t GLYPH_DPI = 300;
  * @param row The row index of the target cell.
  * @param margin The margin around the cells.
  * -------------------------------------------------------------------------- */
-static void scrollToCell(View *view, const uint32_t col, const uint32_t row, const ViewGrid *grid) {
-    real32_t xpos = col * grid->cellSize + (col + 1) * grid->cellMargin;
-    real32_t ypos = row * grid->cellSize + (row + 1) * grid->cellMargin;
-    xpos -= 5; // Adjust for small offset
-    ypos -= 5; // Adjust for small offset
-    view_scroll_x(view, xpos);
+static void scrollToCell(View *view, ViewGrid *grid, uint16_t n) {
+    uint32_t row = n / grid->columnCount;
+    uint32_t col = n % grid->columnCount;
+
+    grid->selectedCellX = col;
+    grid->selectedCellY = row;
+
+    real32_t ypos = grid->cellMargin +
+                    row * (grid->cellSize + grid->cellMargin);
     view_scroll_y(view, ypos);
+    view_update(view);
 }
 
 /*----------------------------------------------------------------------------*/
 Image* fGlyphRenderer(uint16_t glyphId, void *context) {
     FontEngine *fontEngine = (FontEngine*)context;
 
-    if (renderGlyph(fontEngine, glyphId) != 0) {
+    int err = renderGlyph(fontEngine, glyphId, FT_RENDER_MODE_NORMAL);
+    if (err != 0) {
         return NULL;
     }
 
     const FT_Face face = fontEngine->face;
     const FT_Bitmap *glyphBitmap = &face->glyph->bitmap;
-
-    const color_t glyphColor = color_html(GLYPH_COLOR);
-    if (glyphBitmap->width == 0 && glyphBitmap->rows == 0) {
+    if (glyphBitmap->width == 0 || glyphBitmap->rows == 0) {
         return NULL;
     }
 
+    const color_t glyphColor = color_html(GLYPH_COLOR);
     Image *img = ftBmp2ImageRGBA(glyphBitmap, glyphColor);
     return img;
 }
 
 /*----------------------------------------------------------------------------*/
-static void drawGlyphImage(App *app, DCtx *ctx,
+static void drawGlyphImage(DCtx *ctx,
                            real32_t px, real32_t py,
-                           uint16_t glyphId) {
-
-    real32_t halfCell = app->grid.cellSize / 2.0;
-    cassert_no_null(app->glyphCache);
-    Image *img = cacheGet(app->glyphCache, glyphId);
+                           real32_t cellSize,
+                           Image *img) {
     if (img == NULL) {
         return;
     }
 
     uint32_t w = image_width(img);
     uint32_t h = image_height(img);
-    uint32_t cs = (uint32_t)app->grid.cellSize;
+    uint32_t cs = (uint32_t)cellSize;
+    real32_t halfCell = cellSize / 2.0f;
 
     if (w > cs || h > cs) {
         uint32_t x0 = 0, y0 = 0;
@@ -152,14 +153,16 @@ static void drawGlyphImage(App *app, DCtx *ctx,
 }
 
 /*----------------------------------------------------------------------------*/
-static void drawClippedView(App *app, DCtx *ctx,
+static void drawClippedView(DCtx *ctx,
     const real32_t x, const real32_t y,
-    const real32_t width, const real32_t height) {
+    const real32_t width, const real32_t height,
+    const ViewGrid *grid,
+    UtxCache *glyphCache) {
+
+    const real32_t boxSize = grid->cellSize + grid->cellMargin;
 
     uint32_t sti, edi;
     uint32_t stj, edj;
-    const ViewGrid *grid = &app->grid;
-    real32_t boxSize = grid->cellSize + grid->cellMargin;
     real32_t posX = 0;
     real32_t posY = 0;
     uint32_t i, j;
@@ -180,7 +183,7 @@ static void drawClippedView(App *app, DCtx *ctx,
 
     posY = grid->cellMargin + stj * boxSize;
 
-    draw_fill_color(ctx, app->drawcolor);
+    draw_fill_color(ctx, grid->boxColor);
     draw_line_color(ctx, kCOLOR_BLUE);
     draw_line_width(ctx, 1);
     draw_text_align(ctx, ekLEFT, ekTOP);
@@ -188,22 +191,22 @@ static void drawClippedView(App *app, DCtx *ctx,
 
     char_t text[128];
     for (j = stj; j < edj; ++j) {
-        posX = app->grid.cellMargin + sti * boxSize;
+        posX = grid->cellMargin + sti * boxSize;
         for (i = sti; i < edi; ++i) {
             bool_t isHoverCell = FALSE;
 
             uint16_t n = (uint16_t)(j * grid->columnCount + i);
-            if (n >= app->grid.totalCells) {
+            if (n >= grid->totalCells) {
                 goto loopEnd;
             }
             bstd_sprintf(text, sizeof(text), "%04X", n);
 
-            if (app->selectedCellX == i && app->selectedCellY == j) {
+            if (grid->selectedCellX == i && grid->selectedCellY == j) {
                 draw_line_width(ctx, 6);
                 draw_line_color(ctx, kCOLOR_RED);
 
                 isHoverCell = TRUE;
-            } else if (app->mouseCellX == i && app->mouseCellY == j) {
+            } else if (grid->hoverCellX == i && grid->hoverCellY == j) {
                 draw_line_width(ctx, 3);
                 draw_line_color(ctx, kCOLOR_BLUE);
                 isHoverCell = TRUE;
@@ -217,7 +220,11 @@ static void drawClippedView(App *app, DCtx *ctx,
                 draw_line_color(ctx, kCOLOR_BLUE);
             }
 
-            drawGlyphImage(app, ctx, posX, posY, n);
+            drawGlyphImage(
+                ctx, posX, posY,
+                grid->cellSize,
+                cacheGet(glyphCache, n)
+            );
 
             posX += boxSize;
         }
@@ -230,62 +237,66 @@ loopEnd:;
 /*----------------------------------------------------------------------------*/
 static void onDrawView(App *app, Event *e) {
     const EvDraw *ed = event_params(e, EvDraw);
-    if (app->grid.totalCells > 0) {
-        drawClippedView(app, ed->ctx, ed->x, ed->y, ed->width, ed->height);
+    if (app->glyphCache != NULL) {
+        drawClippedView(
+            ed->ctx, ed->x, ed->y, ed->width, ed->height,
+            &app->grid, app->glyphCache
+        );
     }
 }
 
 /*----------------------------------------------------------------------------*/
-static void onMouseAction(App *app,
+static void onMouseAction(View *view, ViewGrid *grid,
                          const real32_t x, const real32_t y,
                          const uint32_t action) {
-    real32_t boxSize = app->grid.cellSize + app->grid.cellMargin;
+
+    real32_t boxSize = grid->cellSize + grid->cellMargin;
     uint32_t mx = (uint32_t)bmath_floorf(x / boxSize);
     uint32_t my = (uint32_t)bmath_floorf(y / boxSize);
-    real32_t xmin = mx * boxSize + app->grid.cellMargin;
-    real32_t xmax = xmin + app->grid.cellSize;
-    real32_t ymin = my * boxSize + app->grid.cellMargin;
-    real32_t ymax = ymin + app->grid.cellSize;
+    real32_t xmin = mx * boxSize + grid->cellMargin;
+    real32_t xmax = xmin + grid->cellSize;
+    real32_t ymin = my * boxSize + grid->cellMargin;
+    real32_t ymax = ymin + grid->cellSize;
 
     if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
         if (action == 0) {
-            app->mouseCellX = mx;
-            app->mouseCellY = my;
+            grid->hoverCellX = mx;
+            grid->hoverCellY = my;
         } else {
-            app->selectedCellX = mx;
-            app->selectedCellY = my;
+            grid->selectedCellX = mx;
+            grid->selectedCellY = my;
         }
     } else {
-        app->mouseCellX = UINT32_MAX;
-        app->mouseCellY = UINT32_MAX;
+        grid->hoverCellX = UINT32_MAX;
+        grid->hoverCellY = UINT32_MAX;
     }
 
-    view_update(app->ui.view);
+    view_update(view);
 }
 
 /*----------------------------------------------------------------------------*/
 static void onMouseMove(App *app, Event *e) {
     const EvMouse *em = event_params(e, EvMouse);
-    onMouseAction(app, em->x, em->y, 0);
+    onMouseAction(app->ui.view, &app->grid, em->x, em->y, 0);
 }
 
 /*----------------------------------------------------------------------------*/
 static void onMouseUp(App *app, Event *e) {
     const EvMouse *em = event_params(e, EvMouse);
-    onMouseAction(app, em->x, em->y, 0);
+    onMouseAction(app->ui.view, &app->grid, em->x, em->y, 0);
 }
 
 /*----------------------------------------------------------------------------*/
 static void onMouseDown(App *app, Event *e) {
     const EvMouse *em = event_params(e, EvMouse);
-    onMouseAction(app, em->x, em->y, 1);
+    onMouseAction(app->ui.view, &app->grid, em->x, em->y, 1);
 }
 
 /*----------------------------------------------------------------------------*/
-static void onKeyDown(App *app, Event *e) {
+static void onKeyDown(App * app, Event *e) {
     const EvKey *ek = event_params(e, EvKey);
-    View *view = event_sender(e, View);
-    const ViewGrid *grid = &app->grid;
+    View *view = app->ui.view;
+    ViewGrid *grid = &app->grid;
     const real32_t margin = grid->cellMargin;
     const real32_t boxSize = grid->cellSize + margin;
     V2Df scroll;
@@ -293,100 +304,121 @@ static void onKeyDown(App *app, Event *e) {
 
     view_viewport(view, &scroll, &size);
 
-    if (ek->key == ekKEY_DOWN && app->selectedCellY < grid->rowCount - 1) {
-        real32_t ymin = (app->selectedCellY + 1) * boxSize + margin;
+    if (ek->key == ekKEY_DOWN && grid->selectedCellY < grid->rowCount - 1) {
+        real32_t ymin = (grid->selectedCellY + 1) * boxSize + margin;
         ymin += grid->cellSize;
 
         if (scroll.y + size.height <= ymin) {
             view_scroll_y(view, ymin - size.height + margin);
-            app->mouseCellX = UINT32_MAX;
-            app->mouseCellY = UINT32_MAX;
+            grid->hoverCellX = UINT32_MAX;
+            grid->hoverCellY = UINT32_MAX;
         }
 
-        app->selectedCellY += 1;
-        view_update(app->ui.view);
+        grid->selectedCellY += 1;
+        view_update(view);
     }
 
-    if (ek->key == ekKEY_UP && app->selectedCellY > 0) {
-        real32_t ymin = (app->selectedCellY - 1) * boxSize + margin;
+    if (ek->key == ekKEY_UP && grid->selectedCellY > 0) {
+        real32_t ymin = (grid->selectedCellY - 1) * boxSize + margin;
 
         if (scroll.y >= ymin) {
             view_scroll_y(view, ymin - margin);
-            app->mouseCellX = UINT32_MAX;
-            app->mouseCellY = UINT32_MAX;
+            grid->hoverCellX = UINT32_MAX;
+            grid->hoverCellY = UINT32_MAX;
         }
 
-        app->selectedCellY -= 1;
-        view_update(app->ui.view);
+        grid->selectedCellY -= 1;
+        view_update(view);
     }
 
-    if (ek->key == ekKEY_RIGHT && app->selectedCellX < app->grid.columnCount - 1) {
-        real32_t xmin = (app->selectedCellX + 1) * boxSize + margin;
+    if (ek->key == ekKEY_RIGHT && grid->selectedCellX < grid->columnCount - 1) {
+        real32_t xmin = (grid->selectedCellX + 1) * boxSize + margin;
         xmin += grid->cellSize;
 
         if (scroll.x + size.width <= xmin) {
             view_scroll_x(view, xmin - size.width + margin);
-            app->mouseCellX = UINT32_MAX;
-            app->mouseCellY = UINT32_MAX;
+            grid->hoverCellX = UINT32_MAX;
+            grid->hoverCellY = UINT32_MAX;
         }
 
-        app->selectedCellX += 1;
-        view_update(app->ui.view);
+        grid->selectedCellX += 1;
+        view_update(view);
     }
 
-    if (ek->key == ekKEY_LEFT && app->selectedCellX > 0) {
-        real32_t xmin = (app->selectedCellX - 1) * boxSize + margin;
+    if (ek->key == ekKEY_LEFT && grid->selectedCellX > 0) {
+        real32_t xmin = (grid->selectedCellX - 1) * boxSize + margin;
 
         if (scroll.x >= xmin) {
             view_scroll_x(view, xmin - margin);
-            app->mouseCellX = UINT32_MAX;
-            app->mouseCellY = UINT32_MAX;
+            grid->hoverCellX = UINT32_MAX;
+            grid->hoverCellY = UINT32_MAX;
         }
 
-        app->selectedCellX -= 1;
-        view_update(app->ui.view);
+        grid->selectedCellX -= 1;
+        view_update(view);
     }
-
 }
 
 /** ----------------------------------------------------------------------------
  * @brief Calculate the grid dimension based on the given width.
  * -------------------------------------------------------------------------- */
-static void recalculateGrid(App *app, real32_t width) {
-    const ViewGrid *grid = &app->grid;
+static void recalculateGrid(ViewGrid *grid, real32_t width) {
     real32_t columnCount = (width - grid->cellMargin) / (grid->cellSize + grid->cellMargin);
     columnCount = bmath_floorf(columnCount);
-
-    real32_t rowCount = app->grid.totalCells / columnCount;
+    real32_t rowCount = grid->totalCells / columnCount;
     rowCount = bmath_ceilf(rowCount);
 
-    char_t labelText[256];
-    bstd_sprintf(labelText, sizeof(labelText), "New size: %.2f x %.2f", columnCount, rowCount);
-    label_text(app->ui.lblCellsInfo, labelText);
-
-    app->grid.columnCount = (uint32_t)columnCount;
-    app->grid.rowCount = (uint32_t)rowCount;
+    grid->columnCount = (uint32_t)columnCount;
+    grid->rowCount = (uint32_t)rowCount;
 }
 
 /** ----------------------------------------------------------------------------
  * @brief Set the content size of the view based on the grid dimensions.
  * -------------------------------------------------------------------------- */
-static void updateViewContentSize(App *app) {
-    const ViewGrid *grid = &app->grid;
-    real32_t width = grid->columnCount * grid->cellSize + (grid->columnCount + 1) * grid->cellMargin;
-    real32_t height = grid->rowCount * grid->cellSize + (grid->rowCount + 4) * grid->cellMargin;
+static void updateViewContentSize(View *view, ViewGrid *grid) {
+    real32_t boxSize = grid->cellSize + grid->cellMargin;
+    real32_t width = grid->cellMargin + grid->columnCount * boxSize;
+    real32_t height = grid->cellMargin + grid->rowCount * boxSize;
     view_content_size(
-        app->ui.view,
+        view,
         s2df((real32_t)width, (real32_t)height),
-        s2df(grid->cellSize + grid->cellMargin, grid->cellSize + grid->cellMargin)  /* Scroll step */
+        s2df(boxSize, boxSize)  /* Scroll step */
     );
 }
 
 /*----------------------------------------------------------------------------*/
 static void onSizeChanged(App *app, Event *e) {
     const EvSize *esz = event_params(e, EvSize);
-    recalculateGrid(app, esz->width);
-    updateViewContentSize(app);
+    ViewGrid *grid = &app->grid;
+
+    /* Subtract vertical scrollbar width to get actual viewport width */
+    real32_t vscrollbarWidth;
+    view_scroll_size(app->ui.view, &vscrollbarWidth, NULL);
+    recalculateGrid(grid, esz->width - vscrollbarWidth);
+
+    char_t labelText[256];
+    bstd_sprintf(labelText, sizeof(labelText), "Grid: %d x %d", grid->columnCount, grid->rowCount);
+    label_text(app->ui.lblCellsInfo, labelText);
+
+    updateViewContentSize(app->ui.view, grid);
+}
+
+
+/*----------------------------------------------------------------------------*/
+static void onGlyphIndexChanged(App *app, Event *e) {
+    ViewGrid *grid = evbind_object(e, ViewGrid);
+    Layout *layout = event_sender(e, Layout);
+    cassert(event_type(e) == ekGUI_EVENT_OBJCHANGE);
+    if (evbind_modify(e, ViewGrid, uint16_t, glyphIdx) == TRUE) {
+        if (grid->totalCells > 0 && grid->glyphIdx < grid->totalCells) {
+            layout_dbind_update(layout, ViewGrid, uint16_t, glyphIdx);
+            scrollToCell(app->ui.view, grid, grid->glyphIdx);
+        } else {
+            bool_t *res = event_result(e, bool_t);
+            *res = FALSE;
+        }
+    }
+    return;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -400,6 +432,9 @@ static Layout *createControlLayout(App *app) {
     Edit *ebxGlyphId = edit_create();
     edit_align(ebxGlyphId, ekRIGHT);
     layout_edit(layout, ebxGlyphId, 1, 0);
+    cell_dbind(layout_cell(layout, 1, 0), ViewGrid, uint16_t, glyphIdx);
+    layout_dbind(layout, listener(app, onGlyphIndexChanged, App), ViewGrid);
+    layout_dbind_obj(layout, &app->grid, ViewGrid);
 
     Label *lblGlyphSize = label_create();
     label_text(lblGlyphSize, "Size:");
@@ -429,7 +464,6 @@ static Layout *createControlLayout(App *app) {
 static Layout *createInfoLayout(App *app) {
     Layout *layout = layout_create(2, 1);
     Label *lblInfo = label_create();
-    char_t text[256];
 
     label_align(lblInfo, ekRIGHT);
 
@@ -442,7 +476,8 @@ static Layout *createInfoLayout(App *app) {
     app->ui.lblCellsInfo = lblInfo;
 
     /* Text for labels dimensioning */
-    bstd_sprintf(text, sizeof(text), CELLS_INFO, 1000, 1000, 1000, 1000);
+    char_t text[256];
+    bstd_sprintf(text, sizeof(text), "Grid: [%d, %d]", 1000, 1000);
     label_size_text(app->ui.lblCellsInfo, text);
     app->ui.lyInfo = layout;
     return layout;
@@ -462,8 +497,8 @@ static void getTableData(App *app, Event *e) {
         case ekGUI_EVENT_TBL_CELL: {
             const EvTbPos *pos = event_params(e, EvTbPos);
             EvTbCell *cell = event_result(e, EvTbCell);
-            bstd_sprintf(app->temptxt, sizeof(app->temptxt), "Name %d", pos->row);
-            cell->text = app->temptxt;
+            bstd_sprintf(app->nameColumn, sizeof(app->nameColumn), "Name %d", pos->row);
+            cell->text = app->nameColumn;
             break;
         }
     }
@@ -549,13 +584,6 @@ static Panel *createCentralPanel(App *app) {
 }
 
 /*----------------------------------------------------------------------------*/
-static void onMovedEvent(App *app, Event *e) {
-    const EvPos *ep = event_params(e, EvPos);
-    bstd_printf("Window moved: (%d, %d)\n", (uint32_t)ep->x, (uint32_t)ep->y);
-    unref(app);
-}
-
-/*----------------------------------------------------------------------------*/
 static void onCloseWEvent(App *app, Event *e) {
     osapp_finish();
     unref(app);
@@ -563,17 +591,20 @@ static void onCloseWEvent(App *app, Event *e) {
 }
 
 /*----------------------------------------------------------------------------*/
-static void initViewGrid(App *app) {
-    app->grid.cellSize = 95;
-    app->grid.cellMargin = 5;
+static void initViewGrid(ViewGrid *grid) {
+    grid->cellSize = 95;
+    grid->cellMargin = 5;
 
-    app->colIdx = 0;
-    app->rowIdx = 0;
-    app->grid.cellMargin = 5;
-    app->mouseCellX = UINT32_MAX;
-    app->mouseCellY = UINT32_MAX;
-    app->selectedCellX = app->colIdx;
-    app->selectedCellY = app->rowIdx;
+    grid->rowCount = 0;
+    grid->columnCount = 0;
+
+    grid->glyphIdx = 0;
+    grid->hoverCellX = UINT32_MAX;
+    grid->hoverCellY = UINT32_MAX;
+    grid->selectedCellX = 0;
+    grid->selectedCellY = 0;
+
+    grid->boxColor = gui_alt_color(color_rgb(200, 240, 200), color_rgb(80, 128, 80));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -630,9 +661,6 @@ static void closeFont(App *app) {
 
         cacheDestroy(&app->glyphCache);
     }
-
-    /* Reset the UI info */
-    app->grid.columnCount = app->grid.rowCount = app->grid.totalCells = 0;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -642,16 +670,21 @@ static void onFileOpen(App *app, Event *e) {
     String *homeDir = hfile_home_dir("");
     log_printf("Opening folder: (%s)", tc(homeDir));
     const char_t *ftypes[] = {"ttf", "otf", "*"};
-    const char_t *filePath = comwin_open_file(app->ui.window, ftypes, 3, tc(homeDir));
+    const char_t *filePath = comwin_open_file(app->ui.window, "Select Font File", ftypes, 3, tc(homeDir));
     if (filePath != NULL) {
         closeFont(app);
 
         log_printf("'%s' font file selected", filePath);
         loadFont(app, filePath);
-        initViewGrid(app);
-        updateViewContentSize(app);
 
-        view_update(app->ui.view);
+        ViewGrid *grid = &app->grid;
+        View *view = app->ui.view;
+        initViewGrid(grid);
+        recalculateGrid(grid, 500);
+        updateViewContentSize(view, grid);
+        scrollToCell(view, grid, 0);
+
+        window_update(app->ui.window);
     }
     str_destroy(&homeDir);
 }
@@ -792,20 +825,16 @@ static App *createApp(void) {
     app->closure.context = (void*)&app->fontEngine;
     app->closure.render = fGlyphRenderer;
 
-    app->drawcolor = gui_alt_color(color_rgb(200, 240, 200), color_rgb(80, 128, 80));
-    app->backcolor = gui_alt_color(color_rgb(80, 80, 240), color_rgb(240, 240, 80));
-
-    initViewGrid(app);
+    initViewGrid(&app->grid);
+    dbind(ViewGrid, uint16_t, glyphIdx);
 
     /* Main Window */
     app->ui.window = window_create(ekWINDOW_STDRES);
     window_title(app->ui.window, "Chasm-e-Khat");
     window_origin(app->ui.window, v2df(500, 200));
-    window_OnMoved(app->ui.window, listener(app, onMovedEvent, App));
     window_OnClose(app->ui.window, listener(app, onCloseWEvent, App));
 
-    Panel *panel = NULL;
-    panel = createCentralPanel(app);
+    Panel *panel = createCentralPanel(app);
     window_panel(app->ui.window, panel);
     app->ui.panel = panel;
 
@@ -813,7 +842,7 @@ static App *createApp(void) {
     osapp_menubar(app->ui.menu, app->ui.window);
 
     window_show(app->ui.window);
-    scrollToCell(app->ui.view, app->colIdx, app->rowIdx, &app->grid); /* Scroll to the given cell */
+    window_focus(app->ui.window, (GuiControl*)app->ui.view);
 
     return app;
 }
