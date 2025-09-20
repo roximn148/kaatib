@@ -73,6 +73,7 @@ __EXTERN_C
 _utx_api UtxCache* cacheCreate(uint32_t capacity, RenderClosure *source);
 _utx_api void cacheDestroy(UtxCache **pCache);
 _utx_api Image* cacheGet(UtxCache* cache, uint16_t glyphId);
+_utx_api void cacheInvalidate(UtxCache* cache);
 
 _utx_api real64_t cacheLoadFactor(UtxCache* cache);
 _utx_api real64_t cacheHitRate(UtxCache* cache);

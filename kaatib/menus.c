@@ -91,7 +91,7 @@ static void onFileOpen(App *app, Event *e) {
     log_printf("Opening folder: (%s)", tc(homeDir));
     const char_t *ftypes[] = {"txt", "*"};
     const char_t *filePath = comwin_open_file(
-        app->ui.window,
+        app->ui.window, "Open UTX file",
         ftypes, 2,
         tc(homeDir));
     if (filePath != NULL) {

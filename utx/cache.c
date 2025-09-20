@@ -228,6 +228,23 @@ Image* cacheGet(UtxCache* cache, uint16_t glyphId) {
 }
 
 /** ----------------------------------------------------------------------------
+ * @brief Get image of the given glyph id
+ * -------------------------------------------------------------------------- */
+void cacheInvalidate(UtxCache* cache) {
+    if (cache == NULL || cache->glyphImages == NULL) {
+        return NULL;
+    }
+
+    /* Clear all images */
+    setst_destroy(&cache->glyphImages, fGlyphDestroy, UtxGlyphImage);
+
+    /* Reset the image cache as new */
+    cache->glyphImages = setst_create(fGlyphCompare, UtxGlyphImage, uint16_t);
+    cache->headId = EOL;
+    cache->tailId = EOL;
+}
+
+/** ----------------------------------------------------------------------------
  * @brief Calculate cache load factor
  * -------------------------------------------------------------------------- */
 real64_t cacheLoadFactor(UtxCache* cache) {
