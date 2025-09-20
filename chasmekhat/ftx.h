@@ -38,7 +38,7 @@ int closeFontEngine(FontEngine *fe);
 int loadFontFace(FontEngine *fe, const char *fontPath, unsigned int fontSize, unsigned int dpi);
 int closeFontFace(FontEngine *fe);
 
-int renderGlyph(FontEngine *fe, unsigned int glyphId);
+int renderGlyph(FontEngine *fe, unsigned int glyphId, FT_Render_Mode mode);
 
 Image* ftBmp2ImageRGBA(const FT_Bitmap *ftBitmap, const color_t glyphColor);
 
