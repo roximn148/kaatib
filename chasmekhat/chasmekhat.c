@@ -66,7 +66,7 @@ struct _app_t {
     } ui;
 };
 
-static const char_t GLYPH_COLOR[] = "#0000C0";
+static const char_t GLYPH_COLOR[] = "#0000c0";
 static const uint32_t GLYPH_SIZE = 16;
 static const uint32_t GLYPH_DPI = 256;
 
