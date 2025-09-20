@@ -144,6 +144,16 @@ int renderGlyph(FontEngine *fe, unsigned int glyphId, FT_Render_Mode mode) {
 
 /** ----------------------------------------------------------------------------
  * @brief Gamma2.2 correction alpha map.
+ *
+ * Created with python script,
+ *
+ * @code{.py}
+ * gamma22 = [round(pow(float(i) / 255.0, 1.0/2.2) * 255.0) for i in range(256)]
+ * l = []
+ * for i in range(0, 256, 16):
+ *   l.append(", ".join([f"{gamma22[j]:3}" for j in range(i, i + 16)]))
+ * print(",\n".join(l))
+ * @endcode
  * -------------------------------------------------------------------------- */
 uint8_t GammaCorrectedAlpha[] = {
    0,  21,  28,  34,  39,  43,  46,  50,  53,  56,  59,  61,  64,  66,  68,  70,
@@ -175,7 +185,7 @@ uint8_t GammaCorrectedAlpha[] = {
  * the resulting Image are set to the specified glyph color. The caller
  * is responsible for  destroying the returned Image.
  *
- * @param gBmp A pointer to the FT_Bitmap representing the glyph bitmap.
+ * @param ftBitmap A pointer to FT_Bitmap struct containing the rendered glyph bitmap.
  * @param glyphColor The color of the glyph in RGBA format.
  * @return A new Image containing the glyph data, or NULL if the input is invalid.
  *         The caller is responsible for destroying the returned Image.
