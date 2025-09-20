@@ -269,17 +269,17 @@ static void drawClippedView(DCtx *ctx,
         posY += boxSize;
     }
 loopEnd:
-    if (hasSelectedCell) {
-        draw_line_width(ctx, 2);
-        draw_line_color(ctx, grid->selectedColor);
-        draw_rect(ctx, ekSTROKE, selectedCellX, selectedCellY,
-        grid->cellSize, grid->cellSize);
-    }
     if (hasHoverCell) {
         draw_line_width(ctx, 2);
         draw_line_color(ctx, grid->hoverColor);
         draw_rect(ctx, ekSTROKE, hoverCellX, hoverCellY,
                 grid->cellSize, grid->cellSize);
+    }
+    if (hasSelectedCell) {
+        draw_line_width(ctx, 2);
+        draw_line_color(ctx, grid->selectedColor);
+        draw_rect(ctx, ekSTROKE, selectedCellX, selectedCellY,
+        grid->cellSize, grid->cellSize);
     }
 }
 
