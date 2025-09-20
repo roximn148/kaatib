@@ -29,12 +29,12 @@ struct _view_grid_t {
     real32_t cellSize;
     real32_t cellMargin;
 
-    uint32_t hoverCellX;
-    uint32_t hoverCellY;
-    uint32_t selectedCellX;
-    uint32_t selectedCellY;
+    uint16_t hoverCell;
+    uint16_t selectedCell;
 
     color_t boxColor;
+    color_t selectedColor;
+    color_t hoverColor;
 };
 
 typedef struct _app_t App;
@@ -66,28 +66,66 @@ struct _app_t {
     } ui;
 };
 
-static const char_t GLYPH_COLOR[] = "#0000C0";
+static const char_t GLYPH_COLOR[] = "#0000c0";
 static const uint32_t GLYPH_SIZE = 16;
 static const uint32_t GLYPH_DPI = 256;
 
 /** ----------------------------------------------------------------------------
- * @brief Scrolls the view to the specified cell.
- *
- * @param view The view containing the cells.
- * @param col The column index of the target cell.
- * @param row The row index of the target cell.
- * @param margin The margin around the cells.
+ * @brief Convert cell index to x, y postion vector.
  * -------------------------------------------------------------------------- */
-static void scrollToCell(View *view, ViewGrid *grid, uint16_t n) {
-    uint32_t row = n / grid->columnCount;
-    uint32_t col = n % grid->columnCount;
+static V2Df gridCell2Position(const ViewGrid *grid, const uint16_t idx) {
+    cassert_no_null(grid);
 
-    grid->selectedCellX = col;
-    grid->selectedCellY = row;
-
-    real32_t ypos = grid->cellMargin +
+    V2Df pos;
+    uint32_t row = idx / grid->columnCount;
+    uint32_t col = idx % grid->columnCount;
+    pos.x = grid->cellMargin +
+                    col * (grid->cellSize + grid->cellMargin);
+    pos.y = grid->cellMargin +
                     row * (grid->cellSize + grid->cellMargin);
-    view_scroll_y(view, ypos);
+
+    return pos;
+}
+
+/** ----------------------------------------------------------------------------
+ * @brief Convert x, y postion to cell index.
+ * -------------------------------------------------------------------------- */
+static uint16_t gridPosition2Cell(const ViewGrid *grid, real32_t x, real32_t y) {
+    cassert_no_null(grid);
+
+    real32_t margin = grid->cellMargin;
+    if (x < margin || y < margin) {
+        return UINT16_MAX;
+    }
+
+    real32_t boxSize = grid->cellSize + margin;
+    uint32_t mx = (uint32_t)bmath_floorf(x / boxSize);
+    uint32_t my = (uint32_t)bmath_floorf(y / boxSize);
+    real32_t xmin = mx * boxSize + grid->cellMargin;
+    real32_t xmax = xmin + grid->cellSize;
+    real32_t ymin = my * boxSize + grid->cellMargin;
+    real32_t ymax = ymin + grid->cellSize;
+
+    uint16_t idx = UINT16_MAX;
+    if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+        uint32_t col = mx;
+        uint32_t row = my;
+        idx = (uint16_t)(row * grid->columnCount + col);
+    }
+
+    if (idx >= grid->totalCells) {
+        idx = UINT16_MAX;
+    }
+
+    return idx;
+}
+
+/** ----------------------------------------------------------------------------
+ * @brief Scrolls the view to the specified cell.
+ * -------------------------------------------------------------------------- */
+static void scrollToCell(View *view, ViewGrid *grid, uint16_t idx) {
+    V2Df pos = gridCell2Position(grid, idx);
+    view_scroll_y(view, pos.y);
     view_update(view);
 }
 
@@ -189,49 +227,60 @@ static void drawClippedView(DCtx *ctx,
     draw_text_align(ctx, ekLEFT, ekTOP);
     draw_text_halign(ctx, ekLEFT);
 
+    bool_t hasSelectedCell = FALSE;
+    real32_t selectedCellX = 0.0f;
+    real32_t selectedCellY = 0.0f;
+    bool_t hasHoverCell = FALSE;
+    real32_t hoverCellX = 0.0f;
+    real32_t hoverCellY = 0.0f;
+
     char_t text[128];
     for (j = stj; j < edj; ++j) {
         posX = grid->cellMargin + sti * boxSize;
         for (i = sti; i < edi; ++i) {
-            bool_t isHoverCell = FALSE;
-
             uint16_t n = (uint16_t)(j * grid->columnCount + i);
             if (n >= grid->totalCells) {
                 goto loopEnd;
             }
-            bstd_sprintf(text, sizeof(text), "%04X", n);
 
-            if (grid->selectedCellX == i && grid->selectedCellY == j) {
-                draw_line_width(ctx, 6);
-                draw_line_color(ctx, kCOLOR_RED);
-
-                isHoverCell = TRUE;
-            } else if (grid->hoverCellX == i && grid->hoverCellY == j) {
-                draw_line_width(ctx, 3);
-                draw_line_color(ctx, kCOLOR_BLUE);
-                isHoverCell = TRUE;
+            if (grid->selectedCell == n) {
+                hasSelectedCell = TRUE;
+                selectedCellX = posX;
+                selectedCellY = posY;
+            }
+            if (grid->hoverCell == n) {
+                hasHoverCell = TRUE;
+                hoverCellX = posX;
+                hoverCellY = posY;
             }
 
             draw_rect(ctx, ekSKFILL, posX, posY, grid->cellSize, grid->cellSize);
-            draw_text(ctx, text, posX, posY);
 
-            if (isHoverCell == TRUE) {
-                draw_line_width(ctx, 1);
-                draw_line_color(ctx, kCOLOR_BLUE);
-            }
+            bstd_sprintf(text, sizeof(text), "%04X", n);
+            draw_text(ctx, text, posX, posY);
 
             drawGlyphImage(
                 ctx, posX, posY,
                 grid->cellSize,
                 cacheGet(glyphCache, n)
             );
-
             posX += boxSize;
         }
-
         posY += boxSize;
     }
-loopEnd:;
+loopEnd:
+    if (hasSelectedCell) {
+        draw_line_width(ctx, 2);
+        draw_line_color(ctx, grid->selectedColor);
+        draw_rect(ctx, ekSTROKE, selectedCellX, selectedCellY,
+        grid->cellSize, grid->cellSize);
+    }
+    if (hasHoverCell) {
+        draw_line_width(ctx, 2);
+        draw_line_color(ctx, grid->hoverColor);
+        draw_rect(ctx, ekSTROKE, hoverCellX, hoverCellY,
+                grid->cellSize, grid->cellSize);
+    }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -250,25 +299,16 @@ static void onMouseAction(View *view, ViewGrid *grid,
                          const real32_t x, const real32_t y,
                          const uint32_t action) {
 
-    real32_t boxSize = grid->cellSize + grid->cellMargin;
-    uint32_t mx = (uint32_t)bmath_floorf(x / boxSize);
-    uint32_t my = (uint32_t)bmath_floorf(y / boxSize);
-    real32_t xmin = mx * boxSize + grid->cellMargin;
-    real32_t xmax = xmin + grid->cellSize;
-    real32_t ymin = my * boxSize + grid->cellMargin;
-    real32_t ymax = ymin + grid->cellSize;
+    uint16_t idx = gridPosition2Cell(grid, x, y);
 
-    if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+    if (idx != UINT16_MAX) {
         if (action == 0) {
-            grid->hoverCellX = mx;
-            grid->hoverCellY = my;
+            grid->hoverCell = idx;
         } else {
-            grid->selectedCellX = mx;
-            grid->selectedCellY = my;
+            grid->selectedCell = idx;
         }
     } else {
-        grid->hoverCellX = UINT32_MAX;
-        grid->hoverCellY = UINT32_MAX;
+        grid->hoverCell = UINT16_MAX;
     }
 
     view_update(view);
@@ -294,68 +334,38 @@ static void onMouseDown(App *app, Event *e) {
 
 /*----------------------------------------------------------------------------*/
 static void onKeyDown(App * app, Event *e) {
+    ViewGrid *grid = &app->grid;
+    if (grid->columnCount == 0) { return; }
+
     const EvKey *ek = event_params(e, EvKey);
     View *view = app->ui.view;
-    ViewGrid *grid = &app->grid;
-    const real32_t margin = grid->cellMargin;
-    const real32_t boxSize = grid->cellSize + margin;
-    V2Df scroll;
-    S2Df size;
 
-    view_viewport(view, &scroll, &size);
+    uint32_t row = grid->selectedCell / grid->columnCount;
 
-    if (ek->key == ekKEY_DOWN && grid->selectedCellY < grid->rowCount - 1) {
-        real32_t ymin = (grid->selectedCellY + 1) * boxSize + margin;
-        ymin += grid->cellSize;
-
-        if (scroll.y + size.height <= ymin) {
-            view_scroll_y(view, ymin - size.height + margin);
-            grid->hoverCellX = UINT32_MAX;
-            grid->hoverCellY = UINT32_MAX;
+    if (ek->key == ekKEY_DOWN && row < grid->rowCount - 1) {
+        grid->selectedCell += (uint16_t)grid->columnCount;
+        if (grid->selectedCell >= grid->totalCells) {
+            grid->selectedCell = (uint16_t)(grid->totalCells - 1);
         }
-
-        grid->selectedCellY += 1;
-        view_update(view);
+        scrollToCell(view, grid, grid->selectedCell);
     }
 
-    if (ek->key == ekKEY_UP && grid->selectedCellY > 0) {
-        real32_t ymin = (grid->selectedCellY - 1) * boxSize + margin;
-
-        if (scroll.y >= ymin) {
-            view_scroll_y(view, ymin - margin);
-            grid->hoverCellX = UINT32_MAX;
-            grid->hoverCellY = UINT32_MAX;
+    if (ek->key == ekKEY_UP && row > 0) {
+        grid->selectedCell -= (uint16_t)grid->columnCount;
+        if (grid->selectedCell < 0) {
+            grid->selectedCell = 0;
         }
-
-        grid->selectedCellY -= 1;
-        view_update(view);
+        scrollToCell(view, grid, grid->selectedCell);
     }
 
-    if (ek->key == ekKEY_RIGHT && grid->selectedCellX < grid->columnCount - 1) {
-        real32_t xmin = (grid->selectedCellX + 1) * boxSize + margin;
-        xmin += grid->cellSize;
-
-        if (scroll.x + size.width <= xmin) {
-            view_scroll_x(view, xmin - size.width + margin);
-            grid->hoverCellX = UINT32_MAX;
-            grid->hoverCellY = UINT32_MAX;
-        }
-
-        grid->selectedCellX += 1;
-        view_update(view);
+    if (ek->key == ekKEY_RIGHT && grid->selectedCell < grid->totalCells - 1) {
+        grid->selectedCell += 1;
+        scrollToCell(view, grid, grid->selectedCell);
     }
 
-    if (ek->key == ekKEY_LEFT && grid->selectedCellX > 0) {
-        real32_t xmin = (grid->selectedCellX - 1) * boxSize + margin;
-
-        if (scroll.x >= xmin) {
-            view_scroll_x(view, xmin - margin);
-            grid->hoverCellX = UINT32_MAX;
-            grid->hoverCellY = UINT32_MAX;
-        }
-
-        grid->selectedCellX -= 1;
-        view_update(view);
+    if (ek->key == ekKEY_LEFT && grid->selectedCell > 0) {
+        grid->selectedCell -= 1;
+        scrollToCell(view, grid, grid->selectedCell);
     }
 }
 
@@ -363,7 +373,8 @@ static void onKeyDown(App * app, Event *e) {
  * @brief Calculate the grid dimension based on the given width.
  * -------------------------------------------------------------------------- */
 static void recalculateGrid(ViewGrid *grid, real32_t width) {
-    real32_t columnCount = (width - grid->cellMargin) / (grid->cellSize + grid->cellMargin);
+    real32_t columnCount = (width - grid->cellMargin) /
+                           (grid->cellSize + grid->cellMargin);
     columnCount = bmath_floorf(columnCount);
     real32_t rowCount = grid->totalCells / columnCount;
     rowCount = bmath_ceilf(rowCount);
@@ -397,26 +408,37 @@ static void onSizeChanged(App *app, Event *e) {
     recalculateGrid(grid, esz->width - vscrollbarWidth);
 
     char_t labelText[256];
-    bstd_sprintf(labelText, sizeof(labelText), "Grid: %d x %d", grid->columnCount, grid->rowCount);
+    bstd_sprintf(labelText, sizeof(labelText),
+                 "Grid: %d x %d", grid->columnCount, grid->rowCount);
     label_text(app->ui.lblCellsInfo, labelText);
 
     updateViewContentSize(app->ui.view, grid);
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void onGlyphIndexChanged(App *app, Event *e) {
+static void onViewGridChanged(App *app, Event *e) {
     ViewGrid *grid = evbind_object(e, ViewGrid);
     Layout *layout = event_sender(e, Layout);
     cassert(event_type(e) == ekGUI_EVENT_OBJCHANGE);
     if (evbind_modify(e, ViewGrid, uint16_t, glyphIdx) == TRUE) {
         if (grid->totalCells > 0 && grid->glyphIdx < grid->totalCells) {
             layout_dbind_update(layout, ViewGrid, uint16_t, glyphIdx);
+            grid->selectedCell = grid->glyphIdx;
             scrollToCell(app->ui.view, grid, grid->glyphIdx);
         } else {
             bool_t *res = event_result(e, bool_t);
             *res = FALSE;
         }
+    } else
+    if (evbind_modify(e, ViewGrid, real32_t, cellMargin) == TRUE) {
+        grid->cellSize = grid->cellMargin * 19.0f;
+        S2Df sz;
+        real32_t vscrollbarWidth;
+        view_get_size(app->ui.view, &sz);
+        view_scroll_size(app->ui.view, &vscrollbarWidth, NULL);
+        recalculateGrid(grid, sz.width - vscrollbarWidth);
+        updateViewContentSize(app->ui.view, grid);
+        view_update(app->ui.view);
     }
     return;
 }
@@ -433,16 +455,18 @@ static Layout *createControlLayout(App *app) {
     edit_align(ebxGlyphId, ekRIGHT);
     layout_edit(layout, ebxGlyphId, 1, 0);
     cell_dbind(layout_cell(layout, 1, 0), ViewGrid, uint16_t, glyphIdx);
-    layout_dbind(layout, listener(app, onGlyphIndexChanged, App), ViewGrid);
-    layout_dbind_obj(layout, &app->grid, ViewGrid);
 
     Label *lblGlyphSize = label_create();
-    label_text(lblGlyphSize, "Size:");
+    label_text(lblGlyphSize, "Box Size:");
     layout_label(layout, lblGlyphSize, 2, 0);
 
     Slider *slider = slider_create();
+    slider_steps(slider, 20);
     layout_slider(layout, slider, 3, 0);
+    cell_dbind(layout_cell(layout, 3, 0), ViewGrid, real32_t, cellMargin);
 
+    layout_dbind(layout, listener(app, onViewGridChanged, App), ViewGrid);
+    layout_dbind_obj(layout, &app->grid, ViewGrid);
     /* Force the width of editbox columns */
     layout_hsize(layout, 1, 100);
 
@@ -497,7 +521,8 @@ static void getTableData(App *app, Event *e) {
         case ekGUI_EVENT_TBL_CELL: {
             const EvTbPos *pos = event_params(e, EvTbPos);
             EvTbCell *cell = event_result(e, EvTbCell);
-            bstd_sprintf(app->nameColumn, sizeof(app->nameColumn), "Name %d", pos->row);
+            bstd_sprintf(app->nameColumn, sizeof(app->nameColumn),
+                         "Name %d", pos->row);
             cell->text = app->nameColumn;
             break;
         }
@@ -561,7 +586,8 @@ static Layout *createMultiLayout(App *app) {
     layout_layout(layout, lyInfo, 0, 2);
 
     /* All the vertical expansion will be done in the middle layout
-       control_layout (top) and info_layout (bottom) will preserve the 'natural' height */
+       control_layout (top) and info_layout (bottom) will preserve
+       the 'natural' height */
     layout_vexpand(layout, 1);
 
     /* A vertical margins between middle and (controls, info) */
@@ -599,12 +625,15 @@ static void initViewGrid(ViewGrid *grid) {
     grid->columnCount = 0;
 
     grid->glyphIdx = 0;
-    grid->hoverCellX = UINT32_MAX;
-    grid->hoverCellY = UINT32_MAX;
-    grid->selectedCellX = 0;
-    grid->selectedCellY = 0;
+    grid->hoverCell = UINT16_MAX;
+    grid->selectedCell = UINT16_MAX;
 
-    grid->boxColor = gui_alt_color(color_rgb(200, 240, 200), color_rgb(80, 128, 80));
+    grid->boxColor = gui_alt_color(color_html("#c8f0c8"),
+                                   color_html("#508050"));
+    grid->selectedColor = gui_alt_color(color_html("#760404"),
+                                        color_html("#e17777"));
+    grid->hoverColor = gui_alt_color(color_html("#508050"),
+                                     color_html("#c8f0c8"));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -626,7 +655,8 @@ static void loadFont(App *app, const char_t *fontFilePath) {
     cassert(app->glyphCache == NULL);
     app->glyphCache = cacheCreate(200, &app->closure);
     if (app->glyphCache != NULL) {
-        log_printf("Application glyph cache initialized to %d capacity.", app->glyphCache->capacity);
+        log_printf("Application glyph cache initialized to %d capacity.",
+                   app->glyphCache->capacity);
     } else {
         log_printf("Application glyph cache failed to initialize");
     }
@@ -642,7 +672,7 @@ static void closeFont(App *app) {
     /* Remove any cache */
     if (app->glyphCache != NULL) {
         UtxCache *cache = app->glyphCache;
-        log_printf("Cache Statistics :-------------------------------------------");
+        log_printf("Cache Statistics :---------------------------------------");
         log_printf("Requests: %d, Hits: %d, Misses: %d",
                     cache->requests,
                     cache->hits,
@@ -656,8 +686,9 @@ static void closeFont(App *app) {
         log_printf("Miss Rate: %.2f%%, Average Miss Penalty: %.3f ms",
                     cacheMissRate(cache)*100.,
                     cache->avgMissPenalty*1000.);
-        log_printf("Average Access Time: %.3f ms", cacheAverageAccessTime(cache)*1000.);
-        log_printf("=============================================================");
+        log_printf("Average Access Time: %.3f ms",
+                   cacheAverageAccessTime(cache)*1000.);
+        log_printf("=========================================================");
 
         cacheDestroy(&app->glyphCache);
     }
@@ -670,7 +701,10 @@ static void onFileOpen(App *app, Event *e) {
     String *homeDir = hfile_home_dir("");
     log_printf("Opening folder: (%s)", tc(homeDir));
     const char_t *ftypes[] = {"ttf", "otf", "*"};
-    const char_t *filePath = comwin_open_file(app->ui.window, "Select Font File", ftypes, 3, tc(homeDir));
+    const char_t *filePath = comwin_open_file(
+        app->ui.window, "Select Font File",
+        ftypes, 3,
+        tc(homeDir));
     if (filePath != NULL) {
         closeFont(app);
 
@@ -826,7 +860,12 @@ static App *createApp(void) {
     app->closure.render = fGlyphRenderer;
 
     initViewGrid(&app->grid);
+
+    /* Data bindings */
     dbind(ViewGrid, uint16_t, glyphIdx);
+    dbind(ViewGrid, real32_t, cellMargin);
+    dbind_range(ViewGrid, real32_t, cellMargin, 5.0f, 25.0f);
+    dbind_increment(ViewGrid, real32_t, cellMargin, 1.0f);
 
     /* Main Window */
     app->ui.window = window_create(ekWINDOW_STDRES);
